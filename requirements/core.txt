@@ -1,0 +1,4 @@
+mcp
+ccxt
+httpx
+python-dotenv

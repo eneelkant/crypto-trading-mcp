@@ -1,0 +1,11 @@
+.venv/
+.venv-finrl/
+.env
+__pycache__/
+*.py[cod]
+
+.mcp-sse.log
+.ngrok.log
+*.egg-info/
+.DS_Store
+.gemini/
