@@ -114,14 +114,21 @@ def normalize_symbol(symbol: str) -> str:
 def pair_allowed(symbol: str, allowed: list[str]) -> bool:
     if not allowed:
         return True
+    sym = symbol.upper()
     candidates = {
-        symbol.upper(),
-        symbol.replace("-", "/").upper(),
-        symbol.replace("/", "").upper(),
-        symbol.replace("-", "").upper(),
-        symbol.replace("/", "-").upper(),
+        sym,
+        sym.replace("-", "/"),
+        sym.replace("/", ""),
+        sym.replace("-", ""),
+        sym.replace("/", "-"),
     }
-    allowed_norm = {a.upper() for a in allowed} | {
-        a.replace("-", "/").upper() for a in allowed
-    } | {a.replace("/", "").upper() for a in allowed}
-    return bool(candidates & allowed_norm)
+    allowed_norm = {a.upper() for a in allowed}
+    if candidates & allowed_norm:
+        return True
+    # Prefix wildcards e.g. PREDICT/*
+    for pattern in allowed_norm:
+        if pattern.endswith("/*") and sym.startswith(pattern[:-1]):
+            return True
+    # Also compare slash-normalized forms
+    allowed_slash = {a.replace("-", "/").upper() for a in allowed}
+    return bool(candidates & allowed_slash)

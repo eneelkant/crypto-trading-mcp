@@ -16,21 +16,19 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (4)
+## Current phase (5)
 
-- Strategy reference + knowledge layer (PO3/VWAP multi-model)
-- Deterministic strategy features + confluence
-- Risk Engine, Portfolio Manager, Trade Planner
-- Circuit breakers + kill switch
-- `trader risk|portfolio|propose`
-- **Still no trade execution / Coinbase trading / wallet ops**
+- Deterministic **PaperExchange** (multi-asset + prediction contracts)
+- Autonomous paper loop: compliance → risk → paper fill
+- Tax/turnover simulation, correlation filter, replay
+- `trader paper …` CLI + paper-safe MCP tools
+- **Still no live/authenticated execution**
 
 Defaults:
 
 ```env
 TRADING_MODE=paper
 LIVE_TRADING_ENABLED=false
-LLM_PROVIDER=mock
 ```
 
 ## Setup

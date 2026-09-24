@@ -97,5 +97,80 @@ def estimate_swap_profit(
     }
 
 
+# --- Phase 5 paper-safe tools (no live execute_trade) ---
+_paper_tools = None
+
+
+def _paper():
+    global _paper_tools
+    if _paper_tools is None:
+        from crypto_trading_mcp.mcp_tools.paper import PaperToolSurface
+
+        _paper_tools = PaperToolSurface()
+    return _paper_tools
+
+
+@mcp.tool()
+def get_portfolio() -> dict[str, Any]:
+    """Return the paper portfolio snapshot. Real money is never used."""
+    return _paper().get_portfolio()
+
+
+@mcp.tool()
+def get_positions() -> list[dict[str, Any]]:
+    """Return open paper positions."""
+    return _paper().get_positions()
+
+
+@mcp.tool()
+def get_open_orders() -> list[dict[str, Any]]:
+    """Return open paper orders."""
+    return _paper().get_open_orders()
+
+
+@mcp.tool()
+def get_trade_status(order_id: str) -> dict[str, Any]:
+    """Return status for a paper order id."""
+    return _paper().get_trade_status(order_id)
+
+
+@mcp.tool()
+def get_performance() -> dict[str, Any]:
+    """Return paper trading performance metrics."""
+    return _paper().get_performance()
+
+
+@mcp.tool()
+def propose_trade(plan: dict[str, Any]) -> dict[str, Any]:
+    """Acknowledge a proposed trade plan (no execution)."""
+    return _paper().propose_trade(plan)
+
+
+@mcp.tool()
+def validate_trade(plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate a trade for paper mode. Does not place live orders."""
+    return _paper().validate_trade(plan)
+
+
+@mcp.tool()
+def paper_execute_trade(plan: dict[str, Any], market_price: float) -> dict[str, Any]:
+    """Execute a trade on the PaperExchange only when TRADING_MODE=paper."""
+    from crypto_trading_mcp.config.settings import get_settings
+
+    settings = get_settings()
+    if settings.trading_mode != "paper":
+        return {
+            "executed": False,
+            "reason_codes": ["TRADING_MODE_NOT_PAPER"],
+            "note": "paper_execute_trade refuses non-paper modes.",
+        }
+    if settings.live_trading_enabled:
+        return {
+            "executed": False,
+            "reason_codes": ["LIVE_TRADING_ENABLED_BLOCKED"],
+        }
+    return _paper().paper_execute_trade(plan, market_price)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

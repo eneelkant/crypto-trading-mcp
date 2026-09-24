@@ -1,22 +1,23 @@
 # Portfolio
 
-Deterministic accounting portfolio (`PortfolioManager`).
+Deterministic accounting portfolio (`PortfolioManager`) integrated with `PaperExchange`.
 
 Tracks:
 
 - cash, equity, available cash
-- positions (LONG/SHORT conceptual)
+- positions (crypto spot, equity/ETF shares, futures abstraction, prediction contracts)
 - average entry, quantity, market value
 - realized / unrealized P&L
-- fees
-- exposure
-- daily P&L
-- drawdown
+- fees, exposure, daily P&L, drawdown
 
-Phase 4 does **not** place exchange orders. Portfolio mutations are for testing/accounting and future paper trading.
+## Strategy books
+
+`PaperTradingEngine.strategy_book_report()` reports overall portfolio plus per-strategy and per-asset-class views.
 
 ## CLI
 
 ```bash
 trader portfolio
+trader paper positions
+trader paper performance
 ```

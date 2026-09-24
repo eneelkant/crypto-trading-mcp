@@ -1,0 +1,41 @@
+{
+  "strategy_metadata": {
+    "name": "Trend Following Commodities",
+    "version": "1.0.0",
+    "description": "EMA 50/200 golden/death cross with ATR×3 trailing stop. Reference only.",
+    "author": "Crypto Trading MCP Reference Suite",
+    "supported_markets": ["Commodity"],
+    "recommended_pairs": ["GLD", "USO"],
+    "execution_timeframe": "1d",
+    "bias_timeframe": "1w"
+  },
+  "risk_management": {
+    "risk_per_trade_percent": 0.75,
+    "min_risk_reward_ratio": 1.5,
+    "target_risk_reward_ratio": 3.0,
+    "stop_loss_method": "ATR_Trail_3x",
+    "atr_fallback_multiplier": 3.0,
+    "partial_take_profit_1r": {"enabled": false, "exit_quantity_percent": 0},
+    "move_stop_loss_to_breakeven_at_1r": false,
+    "circuit_breakers": {
+      "max_daily_loss_percent": 3.0,
+      "max_trades_per_day": 4,
+      "cooldown_bars_between_trades": 3,
+      "eod_flat_close_enabled": false
+    }
+  },
+  "signal_filters": {
+    "adx": {"length": 14, "min_strength": 20},
+    "ema_alignment": {"fast_ema": 50, "slow_ema": 200, "structural_ema": 200, "long_term_ema": 200},
+    "volume": {"length": 20, "multiplier": 1.0}
+  },
+  "trading_models": [
+    {
+      "model_id": "EMA_CROSS",
+      "name": "EMA 50/200 Cross",
+      "type": "Trend_Following",
+      "enabled": true,
+      "rules": {"atr_trail_multiplier": 3.0, "signals": ["golden_cross", "death_cross"]}
+    }
+  ]
+}

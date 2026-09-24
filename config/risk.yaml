@@ -20,6 +20,12 @@ risk:
     - SOL/USD
     - SOL-USD
     - SOLUSDT
+    - SPY
+    - QQQ
+    - GLD
+    - USO
+    - NQ1!
+    - PREDICT/*
 
 circuit_breakers:
   daily_loss_limit: true
