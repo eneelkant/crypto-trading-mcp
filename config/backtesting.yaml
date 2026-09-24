@@ -1,0 +1,79 @@
+backtesting:
+  initial_capital: 100000
+  base_currency: USD
+
+  commission:
+    enabled: true
+
+  slippage:
+    enabled: true
+
+  include_fees: true
+  include_slippage: true
+
+  prevent_lookahead: true
+  prevent_data_leakage: true
+  closed_candle_only: true
+
+  execution_model: paper_exchange
+
+  position_sizing:
+    use_strategy_risk_rules: true
+
+  agent_mode: deterministic  # deterministic | llm
+  llm_enabled: false
+  llm_cache_enabled: true
+  random_seed: 42
+
+  reports_dir: reports/backtests
+
+  tax_simulation:
+    tax_enabled: false
+
+walk_forward:
+  enabled: true
+  training_days: 180
+  validation_days: 60
+  test_days: 60
+  step_days: 30
+
+monte_carlo:
+  enabled: false
+  iterations: 500
+  seed: 42
+
+parameter_sensitivity:
+  enabled: true
+  donchian_lookbacks: [18, 20, 22]
+  atr_multipliers: [1.8, 2.0, 2.2]
+
+prediction_backtest:
+  edge_threshold: 0.04
+  max_brier_score_calibration: 0.25
+
+strategy_instruments:
+  mean_reversion_equity:
+    symbols: [SPY, QQQ]
+    timeframe: 15m
+  momentum_breakout_crypto:
+    symbols: ["BTC/USD", "ETH/USD", "SOL/USD"]
+    timeframe: 1h
+  trend_following_commodities:
+    symbols: [GLD, USO]
+    timeframe: 4h
+  multi_model_po3_vwap:
+    symbols: [BTCUSDT, ETHUSDT]
+    timeframe: 5m
+  smc_order_block_confluence:
+    symbols: [BTCUSDT, ETHUSDT]
+    timeframe: 5m
+
+baselines:
+  - BUY_AND_HOLD
+  - DCA
+  - SIMPLE_MOVING_AVERAGE
+
+disclaimer: >
+  Historical backtest results do not guarantee future performance.
+  Metrics are factual measurements for the tested dataset and period only.
+  This phase does not enable live trading.

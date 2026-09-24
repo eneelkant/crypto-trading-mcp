@@ -214,5 +214,74 @@ def reset_paper_account() -> dict[str, Any]:
     return _paper().reset_paper_account()
 
 
+# --- Phase 6 backtest tools (simulation / read-only) ---
+_backtest_tools = None
+
+
+def _backtest():
+    global _backtest_tools
+    if _backtest_tools is None:
+        from crypto_trading_mcp.mcp_tools.backtest import BacktestToolSurface
+
+        _backtest_tools = BacktestToolSurface()
+    return _backtest_tools
+
+
+@mcp.tool()
+def run_backtest(
+    symbol: str,
+    strategy_id: str = "momentum_breakout_crypto",
+    timeframe: str = "1h",
+    bars: int = 120,
+) -> dict[str, Any]:
+    """Run an offline historical backtest via PaperExchange. Never places live orders."""
+    return _backtest().run_backtest(
+        symbol, strategy_id=strategy_id, timeframe=timeframe, bars=bars
+    )
+
+
+@mcp.tool()
+def run_walk_forward(
+    symbol: str,
+    strategy_id: str = "momentum_breakout_crypto",
+    timeframe: str = "1h",
+    bars: int = 120,
+) -> dict[str, Any]:
+    """Walk-forward validation (train/validation/OOS). Simulation only."""
+    return _backtest().run_walk_forward(
+        symbol, strategy_id=strategy_id, timeframe=timeframe, bars=bars
+    )
+
+
+@mcp.tool()
+def get_backtest_result(backtest_id: str) -> dict[str, Any]:
+    """Fetch a persisted backtest result by id."""
+    return _backtest().get_backtest_result(backtest_id)
+
+
+@mcp.tool()
+def get_backtest_report(backtest_id: str) -> dict[str, Any]:
+    """Fetch a persisted backtest report by id."""
+    return _backtest().get_backtest_report(backtest_id)
+
+
+@mcp.tool()
+def compare_backtests(backtest_ids: list[str]) -> dict[str, Any]:
+    """Compare factual metrics across backtests (no profitability claims)."""
+    return _backtest().compare_backtests(backtest_ids)
+
+
+@mcp.tool()
+def run_benchmark(symbol: str, timeframe: str = "1h", bars: int = 120) -> dict[str, Any]:
+    """Run BUY_AND_HOLD / DCA / SMA baselines for comparison."""
+    return _backtest().run_benchmark(symbol, timeframe=timeframe, bars=bars)
+
+
+@mcp.tool()
+def run_prediction_backtest(rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Evaluate prediction-market forecasts (Brier/log-loss). Simulation only."""
+    return _backtest().run_prediction_backtest(rows)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

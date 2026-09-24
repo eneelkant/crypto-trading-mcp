@@ -16,12 +16,12 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (5)
+## Current phase (6)
 
-- Unified **PaperExchange** with fees, slippage, trailing stops, prediction settlement
-- Autonomous paper loop: agents → consensus → risk → trade plan → paper fill → P&L
-- Sessions, SQLite/in-memory persistence, deterministic market-data replay
-- `trader paper …` CLI + paper-safe MCP tools
+- Offline **historical backtesting** + walk-forward validation on PaperExchange
+- Deterministic fees/slippage/risk identical to paper trading
+- Baselines (Buy&Hold / DCA / SMA), prediction-market evaluation
+- `trader backtest …` / `trader walk-forward …` CLI + MCP tools
 - **Still no live/authenticated execution**
 
 Defaults:
@@ -62,6 +62,10 @@ trader paper run BTC/USD --price 50000
 trader paper portfolio
 trader paper performance
 trader paper replay
+trader backtest BTC/USD --strategy momentum_breakout_crypto
+trader walk-forward BTC/USD
+trader benchmark BTC/USD
+trader prediction-backtest
 ```
 
 ## Tests
@@ -72,6 +76,11 @@ pytest -q
 
 ## Docs
 
+- `docs/BACKTESTING.md`
+- `docs/BACKTESTING_METHODOLOGY.md`
+- `docs/WALK_FORWARD.md`
+- `docs/DATA_VALIDATION.md`
+- `docs/PERFORMANCE_METRICS.md`
 - `docs/PAPER_TRADING.md`
 - `docs/PAPER_TRADING_SAFETY.md`
 - `docs/EXCHANGE_ARCHITECTURE.md`

@@ -153,6 +153,33 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--price", type=float, default=100.0)
     replay.add_argument("--qty", type=float, default=1.0)
 
+    backtest = sub.add_parser("backtest", help="Historical backtest (offline / paper only)")
+    backtest.add_argument("symbol")
+    backtest.add_argument("--strategy", default="momentum_breakout_crypto")
+    backtest.add_argument("--timeframe", default="1h")
+    backtest.add_argument("--start", default=None)
+    backtest.add_argument("--end", default=None)
+    backtest.add_argument("--bars", type=int, default=120)
+    backtest.add_argument("--json", action="store_true")
+    backtest.add_argument("--csv", default=None, help="Optional CSV historical path")
+
+    wf = sub.add_parser("walk-forward", help="Walk-forward validation (offline)")
+    wf.add_argument("symbol")
+    wf.add_argument("--strategy", default="momentum_breakout_crypto")
+    wf.add_argument("--timeframe", default="1h")
+    wf.add_argument("--bars", type=int, default=120)
+
+    sub.add_parser("backtests", help="List persisted backtest runs")
+    report = sub.add_parser("backtest-report", help="Show a backtest report by id")
+    report.add_argument("backtest_id")
+
+    bench = sub.add_parser("benchmark", help="Run baseline benchmarks (B&H / DCA / SMA)")
+    bench.add_argument("symbol")
+    bench.add_argument("--timeframe", default="1h")
+    bench.add_argument("--bars", type=int, default=120)
+
+    sub.add_parser("prediction-backtest", help="Run prediction-market evaluation fixture")
+
     args = parser.parse_args(argv)
     settings = get_settings()
 
@@ -162,8 +189,8 @@ def main(argv: list[str] | None = None) -> int:
                 "trading_mode": settings.trading_mode,
                 "live_trading_enabled": settings.live_trading_enabled,
                 "real_money": False,
-                "phase": 5,
-                "note": "Paper exchange enabled; live execution disabled.",
+                "phase": 6,
+                "note": "Paper exchange + offline backtesting; live execution disabled.",
                 "TRADING_MODE": "PAPER",
                 "REAL_MONEY": "DISABLED",
             }
@@ -383,6 +410,117 @@ def main(argv: list[str] | None = None) -> int:
                 model_probability=args.model_prob,
             )
             _print(order.model_dump(mode="json"))
+            return 0
+
+    # --- Phase 6 backtesting (offline) ---
+    if args.command in {
+        "backtest",
+        "walk-forward",
+        "backtests",
+        "backtest-report",
+        "benchmark",
+        "prediction-backtest",
+    }:
+        from datetime import datetime
+
+        from crypto_trading_mcp.backtest.baselines import run_baselines
+        from crypto_trading_mcp.backtest.data import (
+            CSVHistoricalDataProvider,
+            generate_synthetic_candles,
+        )
+        from crypto_trading_mcp.backtest.engine import BacktestEngine
+        from crypto_trading_mcp.backtest.prediction import evaluate_prediction_rows
+        from crypto_trading_mcp.backtest.reporting import summarize_result, write_json_report, write_markdown_report
+        from crypto_trading_mcp.backtest.store import BacktestStore
+        from crypto_trading_mcp.backtest.walk_forward import WalkForwardValidator
+
+        store = getattr(main, "_backtest_store", None)
+        if store is None:
+            store = BacktestStore()
+            setattr(main, "_backtest_store", store)
+
+        def _load_candles(symbol: str, timeframe: str, bars: int, csv_path: str | None = None):
+            if csv_path:
+                return CSVHistoricalDataProvider(csv_path).load(symbol, timeframe=timeframe)
+            return generate_synthetic_candles(
+                symbol=symbol.upper(), timeframe=timeframe, n=bars, seed=42
+            )
+
+        if args.command == "backtest":
+            start = datetime.fromisoformat(args.start) if args.start else None
+            end = datetime.fromisoformat(args.end) if args.end else None
+            candles = _load_candles(args.symbol, args.timeframe, args.bars, args.csv)
+            if start or end:
+                candles = [
+                    c
+                    for c in candles
+                    if (start is None or c.timestamp >= start) and (end is None or c.timestamp <= end)
+                ]
+            engine = BacktestEngine()
+            result = engine.run(
+                candles=candles,
+                strategy_id=args.strategy,
+                symbol=args.symbol.upper(),
+                timeframe=args.timeframe,
+                data_source="csv" if args.csv else "mock",
+                signal_params={"volume_mult": 1.0},
+            )
+            store.save_result(result)
+            write_json_report(result)
+            write_markdown_report(result)
+            payload = summarize_result(result) if not args.json else result.to_dict()
+            _print(payload)
+            return 0
+
+        if args.command == "walk-forward":
+            candles = _load_candles(args.symbol, args.timeframe, args.bars)
+            out = WalkForwardValidator().run(
+                candles,
+                strategy_id=args.strategy,
+                symbol=args.symbol.upper(),
+                timeframe=args.timeframe,
+            )
+            _print(out)
+            return 0
+
+        if args.command == "backtests":
+            _print({"TRADING_MODE": "PAPER", "runs": store.list_runs()})
+            return 0
+
+        if args.command == "backtest-report":
+            payload = store.get_run(args.backtest_id)
+            _print(payload or {"error": "NOT_FOUND", "backtest_id": args.backtest_id})
+            return 0
+
+        if args.command == "benchmark":
+            candles = _load_candles(args.symbol, args.timeframe, args.bars)
+            _print(run_baselines(candles, initial_capital=100_000))
+            return 0
+
+        if args.command == "prediction-backtest":
+            rows = [
+                {
+                    "model": "ensemble",
+                    "weight": 1.0,
+                    "predicted_probability": 0.62,
+                    "ensemble_probability": 0.62,
+                    "market_probability": 0.55,
+                    "confidence": 0.7,
+                    "outcome": 1,
+                    "quantity": 10,
+                },
+                {
+                    "model": "ensemble",
+                    "weight": 1.0,
+                    "predicted_probability": 0.40,
+                    "ensemble_probability": 0.40,
+                    "market_probability": 0.48,
+                    "confidence": 0.6,
+                    "outcome": 0,
+                    "quantity": 10,
+                },
+            ]
+            _print(evaluate_prediction_rows(rows))
             return 0
 
     parser.error(f"Unknown command: {args.command}")

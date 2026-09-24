@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crypto-trading-mcp"
-version = "0.5.0"
-description = "Multi-agent crypto analysis with deterministic paper exchange (live disabled)"
+version = "0.6.0"
+description = "Multi-agent analysis with paper exchange and offline backtesting (live disabled)"
 requires-python = ">=3.12"
 dependencies = [
   "mcp>=1,<2",
