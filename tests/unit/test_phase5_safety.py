@@ -18,7 +18,6 @@ from crypto_trading_mcp.exchange.slippage import SlippageEngine
 from crypto_trading_mcp.execution.planner import TradePlan
 from crypto_trading_mcp.paper.engine import PaperTradingEngine
 from crypto_trading_mcp.paper.replay import Candle, DeterministicReplay, MarketDataReplay
-from crypto_trading_mcp.risk.config import KillSwitch
 
 
 def _plan(**kwargs) -> TradePlan:
