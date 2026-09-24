@@ -1,0 +1,33 @@
+# Agent ↔ strategy model mapping (configuration-driven).
+strategy_id: multi_model_po3_vwap
+models:
+  M1:
+    name: Power of Three (PO3) Sweep & Rejection
+    primary_agents:
+      - market_intelligence
+      - technical_analysis
+      - trend
+      - strategy
+      - bull
+      - bear
+  M2:
+    name: VWAP Reclaim with Displacement
+    primary_agents:
+      - technical_analysis
+      - trend
+      - strategy
+  M3:
+    name: Order Flow Absorption Reversal
+    primary_agents:
+      - market_intelligence
+      - technical_analysis
+      - strategy
+  M4:
+    name: ICT 4H/15m Fair Value Gap (FVG) Swing Model
+    primary_agents:
+      - market_intelligence
+      - technical_analysis
+      - trend
+      - strategy
+      - bull
+      - bear

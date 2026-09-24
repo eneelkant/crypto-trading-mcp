@@ -28,8 +28,19 @@ ANALYSIS_TRANSITIONS: dict[TradingState, set[TradingState]] = {
         TradingState.IDLE,
         TradingState.FAILED,
         TradingState.HALTED,
-        # Future phases may continue to RISK_REVIEW; blocked for execution now.
         TradingState.RISK_REVIEW,
+    },
+    TradingState.RISK_REVIEW: {
+        TradingState.IDLE,
+        TradingState.FAILED,
+        TradingState.HALTED,
+        # TRADE_PLANNED reserved for later execution phases — not used to place orders.
+        TradingState.TRADE_PLANNED,
+    },
+    TradingState.TRADE_PLANNED: {
+        TradingState.IDLE,
+        TradingState.FAILED,
+        TradingState.HALTED,
     },
     TradingState.FAILED: {TradingState.IDLE, TradingState.HALTED},
     TradingState.HALTED: {TradingState.IDLE},

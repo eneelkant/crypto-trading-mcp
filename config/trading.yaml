@@ -13,6 +13,16 @@ market_data:
   default_timeframe: 1h
   ohlcv_limit: 120
   max_age_seconds: 120
+  multi_timeframes:
+    - 5m
+    - 15m
+    - 240m
 
 analysis:
   minimum_confidence_for_direction: 0.55
+
+strategy:
+  default_id: multi_model_po3_vwap
+  default_version: "1.0.0"
+
+# Global risk limits live in config/risk.yaml and always win when stricter.

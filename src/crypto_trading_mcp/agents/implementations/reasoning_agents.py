@@ -160,15 +160,20 @@ class StrategyAgent(BaseAgent):
                 "risk_flags": ["stale_or_missing_market_data"],
             }
 
+        knowledge = context.artifacts.get("strategy_knowledge")
         interpretation = self.llm_json(
             context,
             system=(
                 "You are the Strategy agent. Produce a hypothesis only — never an order. "
+                "Use strategy_knowledge as a reference specification, not a profitability guarantee. "
                 "Return JSON with market_regime, direction, strategy_type, entry_conditions, "
                 "exit_conditions, invalidation_conditions, time_horizon, confidence, "
-                "supporting_evidence, contradicting_evidence."
+                "supporting_evidence, contradicting_evidence, supporting_model_ids."
             ),
-            prompt=json.dumps(bundle, default=str),
+            prompt=json.dumps(
+                {"analysis": bundle, "strategy_knowledge": knowledge},
+                default=str,
+            ),
         )
         direction = str(interpretation.get("direction", "NEUTRAL")).upper()
         if direction not in {"LONG", "SHORT", "NEUTRAL", "NO_TRADE", "HOLD"}:

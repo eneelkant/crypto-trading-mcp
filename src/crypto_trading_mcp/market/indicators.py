@@ -191,6 +191,179 @@ def last_number(series: Sequence[float | None]) -> float | None:
     return None
 
 
+def adx(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    closes: Sequence[float],
+    period: int = 14,
+) -> dict[str, list[float | None]]:
+    n = len(closes)
+    plus_di: list[float | None] = [None] * n
+    minus_di: list[float | None] = [None] * n
+    adx_vals: list[float | None] = [None] * n
+    if n <= period:
+        return {"adx": adx_vals, "plus_di": plus_di, "minus_di": minus_di}
+
+    trs: list[float] = []
+    plus_dm: list[float] = []
+    minus_dm: list[float] = []
+    for i in range(n):
+        if i == 0:
+            trs.append(highs[i] - lows[i])
+            plus_dm.append(0.0)
+            minus_dm.append(0.0)
+            continue
+        up = highs[i] - highs[i - 1]
+        down = lows[i - 1] - lows[i]
+        plus_dm.append(up if up > down and up > 0 else 0.0)
+        minus_dm.append(down if down > up and down > 0 else 0.0)
+        trs.append(
+            max(
+                highs[i] - lows[i],
+                abs(highs[i] - closes[i - 1]),
+                abs(lows[i] - closes[i - 1]),
+            )
+        )
+
+    atr_s = sum(trs[1 : period + 1])
+    plus_s = sum(plus_dm[1 : period + 1])
+    minus_s = sum(minus_dm[1 : period + 1])
+    dx_vals: list[float] = []
+    for i in range(period, n):
+        if i > period:
+            atr_s = atr_s - (atr_s / period) + trs[i]
+            plus_s = plus_s - (plus_s / period) + plus_dm[i]
+            minus_s = minus_s - (minus_s / period) + minus_dm[i]
+        if atr_s == 0:
+            plus_di[i] = 0.0
+            minus_di[i] = 0.0
+            dx = 0.0
+        else:
+            pdi = 100 * plus_s / atr_s
+            mdi = 100 * minus_s / atr_s
+            plus_di[i] = pdi
+            minus_di[i] = mdi
+            denom = pdi + mdi
+            dx = 0.0 if denom == 0 else abs(pdi - mdi) / denom * 100
+        dx_vals.append(dx)
+        if len(dx_vals) == period:
+            adx_vals[i] = sum(dx_vals) / period
+        elif len(dx_vals) > period:
+            prev = adx_vals[i - 1]
+            assert prev is not None
+            adx_vals[i] = ((prev * (period - 1)) + dx) / period
+    return {"adx": adx_vals, "plus_di": plus_di, "minus_di": minus_di}
+
+
+def vwap(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    closes: Sequence[float],
+    volumes: Sequence[float],
+) -> list[float | None]:
+    out: list[float | None] = [None] * len(closes)
+    cum_pv = 0.0
+    cum_vol = 0.0
+    for i, (h, l, c, v) in enumerate(zip(highs, lows, closes, volumes, strict=True)):
+        typical = (h + l + c) / 3.0
+        cum_pv += typical * v
+        cum_vol += v
+        out[i] = None if cum_vol == 0 else cum_pv / cum_vol
+    return out
+
+
+def swing_points(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    left: int = 2,
+    right: int = 2,
+) -> dict[str, list[tuple[int, float]]]:
+    swing_highs: list[tuple[int, float]] = []
+    swing_lows: list[tuple[int, float]] = []
+    n = len(highs)
+    for i in range(left, n - right):
+        window_h = highs[i - left : i + right + 1]
+        window_l = lows[i - left : i + right + 1]
+        if highs[i] == max(window_h):
+            swing_highs.append((i, float(highs[i])))
+        if lows[i] == min(window_l):
+            swing_lows.append((i, float(lows[i])))
+    return {"swing_highs": swing_highs, "swing_lows": swing_lows}
+
+
+def structural_3bar_swing_stop(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    side: str,
+) -> float | None:
+    if len(highs) < 3 or len(lows) < 3:
+        return None
+    if side.upper() in {"LONG", "BUY"}:
+        return min(lows[-3:])
+    if side.upper() in {"SHORT", "SELL"}:
+        return max(highs[-3:])
+    return None
+
+
+def fibonacci_levels(swing_low: float, swing_high: float) -> dict[str, float]:
+    diff = swing_high - swing_low
+    return {
+        "0.0": swing_high,
+        "0.236": swing_high - 0.236 * diff,
+        "0.382": swing_high - 0.382 * diff,
+        "0.5": swing_high - 0.5 * diff,
+        "0.618": swing_high - 0.618 * diff,
+        "0.786": swing_high - 0.786 * diff,
+        "1.0": swing_low,
+    }
+
+
+def detect_fair_value_gaps(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    closes: Sequence[float],
+) -> list[dict[str, float | int | str]]:
+    """3-candle FVG: bullish if low[i] > high[i-2]; bearish if high[i] < low[i-2]."""
+    gaps: list[dict[str, float | int | str]] = []
+    for i in range(2, len(closes)):
+        if lows[i] > highs[i - 2]:
+            gaps.append(
+                {
+                    "index": i,
+                    "type": "bullish",
+                    "top": float(lows[i]),
+                    "bottom": float(highs[i - 2]),
+                }
+            )
+        elif highs[i] < lows[i - 2]:
+            gaps.append(
+                {
+                    "index": i,
+                    "type": "bearish",
+                    "top": float(lows[i - 2]),
+                    "bottom": float(highs[i]),
+                }
+            )
+    return gaps
+
+
+def market_structure_break(
+    closes: Sequence[float],
+    swing_highs: list[tuple[int, float]],
+    swing_lows: list[tuple[int, float]],
+) -> dict[str, object]:
+    if not closes:
+        return {"status": "UNAVAILABLE", "direction": None}
+    last = closes[-1]
+    last_sh = swing_highs[-1][1] if swing_highs else None
+    last_sl = swing_lows[-1][1] if swing_lows else None
+    if last_sh is not None and last > last_sh:
+        return {"status": "CALCULATED", "direction": "bullish_msb", "level": last_sh}
+    if last_sl is not None and last < last_sl:
+        return {"status": "CALCULATED", "direction": "bearish_msb", "level": last_sl}
+    return {"status": "CALCULATED", "direction": "none", "level": None}
+
+
 def compute_indicator_bundle(
     opens: Sequence[float],
     highs: Sequence[float],
@@ -202,16 +375,25 @@ def compute_indicator_bundle(
     bb = bollinger(closes)
     levels = support_resistance(highs, lows)
     vol = volume_metrics(volumes)
+    adx_bundle = adx(highs, lows, closes, 11)
     return {
         "sma_20": last_number(sma(closes, 20)),
         "sma_50": last_number(sma(closes, 50)),
+        "ema_9": last_number(ema(closes, 9)),
         "ema_12": last_number(ema(closes, 12)),
+        "ema_21": last_number(ema(closes, 21)),
         "ema_26": last_number(ema(closes, 26)),
+        "ema_50": last_number(ema(closes, 50)),
+        "ema_200": last_number(ema(closes, 200)),
         "rsi_14": last_number(rsi(closes, 14)),
         "macd": last_number(macd_bundle["macd"]),
         "macd_signal": last_number(macd_bundle["signal"]),
         "macd_histogram": last_number(macd_bundle["histogram"]),
         "atr_14": last_number(atr(highs, lows, closes, 14)),
+        "adx_11": last_number(adx_bundle["adx"]),
+        "plus_di_11": last_number(adx_bundle["plus_di"]),
+        "minus_di_11": last_number(adx_bundle["minus_di"]),
+        "vwap": last_number(vwap(highs, lows, closes, volumes)),
         "bollinger_middle": last_number(bb["middle"]),
         "bollinger_upper": last_number(bb["upper"]),
         "bollinger_lower": last_number(bb["lower"]),

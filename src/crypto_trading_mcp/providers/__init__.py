@@ -3,9 +3,11 @@ from crypto_trading_mcp.providers.external import (
     UnavailableOnChainProvider,
     UnavailableSentimentProvider,
 )
+from crypto_trading_mcp.providers.order_flow import UnavailableOrderFlowProvider
 
 __all__ = [
     "UnavailableMacroEventProvider",
     "UnavailableOnChainProvider",
+    "UnavailableOrderFlowProvider",
     "UnavailableSentimentProvider",
 ]

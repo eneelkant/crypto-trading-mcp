@@ -1,0 +1,37 @@
+risk:
+  max_position_pct: 0.10
+  max_trade_pct: 0.02
+  max_portfolio_exposure_pct: 0.50
+  max_daily_loss_pct: 0.03
+  max_drawdown_pct: 0.10
+  max_trades_per_day: 20
+  max_slippage_pct: 0.005
+  max_leverage: 1.0
+  require_stop_loss: true
+  min_liquidity_usd: 100000
+  min_confidence: 0.55
+  allowed_pairs:
+    - BTC/USD
+    - BTC-USD
+    - BTCUSDT
+    - ETH/USD
+    - ETH-USD
+    - ETHUSDT
+    - SOL/USD
+    - SOL-USD
+    - SOLUSDT
+
+circuit_breakers:
+  daily_loss_limit: true
+  drawdown_limit: true
+  stale_market_data: true
+  exchange_error_rate: true
+  abnormal_slippage: true
+  excessive_trade_frequency: true
+  provider_outage: true
+
+kill_switch:
+  active: false
+  reason: null
+
+default_strategy_id: multi_model_po3_vwap

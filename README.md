@@ -16,12 +16,14 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (3)
+## Current phase (4)
 
-- MCP read-only tools: public spot price + swap profit estimate
-- Agent framework + LLM router (mock/Ollama/OpenAI/Anthropic/Gemini)
-- Ten analysis agents (market → consensus)
-- **No trade execution, no Coinbase trading, no wallet ops**
+- Strategy reference + knowledge layer (PO3/VWAP multi-model)
+- Deterministic strategy features + confluence
+- Risk Engine, Portfolio Manager, Trade Planner
+- Circuit breakers + kill switch
+- `trader risk|portfolio|propose`
+- **Still no trade execution / Coinbase trading / wallet ops**
 
 Defaults:
 
@@ -51,7 +53,10 @@ python -m crypto_trading_mcp
 ```bash
 trader status
 trader agents
+trader risk
+trader portfolio
 trader analyze BTC/USD
+trader propose BTC-USD
 ```
 
 ## Tests
@@ -66,3 +71,7 @@ pytest
 - `docs/AGENTS.md`
 - `docs/MARKET_INTELLIGENCE.md`
 - `docs/ANALYSIS_AGENTS.md`
+- `docs/STRATEGIES.md`
+- `docs/RISK_MANAGEMENT.md`
+- `docs/PORTFOLIO.md`
+- `docs/TRADE_PLANNING.md`
