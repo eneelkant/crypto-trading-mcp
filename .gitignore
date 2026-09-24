@@ -1,22 +1,45 @@
 .venv/
 .venv-finrl/
+venv/
 .env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 .mcp-sse.log
 .ngrok.log
+*.log
+logs/
+
 *.egg-info/
 .DS_Store
 .gemini/
 data/
+cache/
 *.db
+*.sqlite
 *.sqlite3
+
+# Local runtime / generated artifacts
 reports/backtests/
+reports/
 STOP
+references/failure_log.json
+*.pkl
+*.joblib
+*.pt
+*.onnx
+models/local/
+embeddings/
+.vector_store/
+
+# Frontend build / deps (serve from dist when built locally; do not commit)
 dashboard_ui/node_modules/
 dashboard_ui/dist/
-references/failure_log.json
+node_modules/

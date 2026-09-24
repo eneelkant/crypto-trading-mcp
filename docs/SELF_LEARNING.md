@@ -28,7 +28,12 @@ trader learning retrain
 trader learning rollback
 ```
 
-## Safety
+## Optional ML
 
-Learning may reduce Kelly/confidence multipliers. It cannot disable kill switch,
-raise hard risk limits, place exchange orders, or enable live trading.
+```bash
+pip install -e ".[ml]"
+```
+
+Without XGBoost/sklearn, retraining uses a deterministic logistic fallback so paper
+learning still works on constrained machines (e.g. 16 GB Mac).
+

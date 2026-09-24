@@ -1,27 +1,32 @@
 # Crypto Trading MCP
 
-Experimental multi-agent crypto **market analysis** platform with an MCP server.
+Experimental multi-agent crypto market analysis and **autonomous paper trading** platform with MCP, CLI, dashboard, backtesting, and self-learning.
 
 ```text
-This software is experimental trading infrastructure.
+This repository currently supports research, backtesting and autonomous PAPER trading.
+
+Live execution is disabled by default.
 
 Cryptocurrency trading involves substantial risk.
-
 Past performance and backtesting do not guarantee future results.
-
-Live trading is disabled by default.
-
 Autonomous trading can result in financial loss.
-
 Users are responsible for determining whether and how to use live trading.
 ```
 
 ## Current phase (8)
 
-- Self-learning engine: post-mortem, memory, Brier/calibration, Kelly adaptation,
-  regime detection, optional ML retraining, champion/challenger, proposals, drift
-- Learning panels on the existing dashboard (`http://127.0.0.1:8050`)
-- **Still no live/authenticated execution**
+- **16-agent** analysis / consensus / risk / execution / reflection roster
+- Multi-LLM provider abstraction (`mock` default; OpenAI / Anthropic / Gemini via env)
+- Deterministic technical analysis + strategy engine
+- Bull / Bear / Consensus pipeline
+- Deterministic **RiskEngine** + Kill Switch + circuit breakers
+- PaperExchange / PaperTradingEngine (fees, slippage, portfolio)
+- Backtesting, walk-forward, Monte Carlo, sensitivity, prediction-market evaluation
+- Live observability dashboard at `http://127.0.0.1:8050`
+- Self-learning: post-mortem, failure/success memory, similarity context, Brier/calibration,
+  Kelly adaptation, regime detection, optional ML retraining, champion/challenger, proposals, drift
+- MCP tools + `trader` CLI
+- **No live/authenticated execution**
 
 Defaults:
 
@@ -29,6 +34,8 @@ Defaults:
 TRADING_MODE=paper
 LIVE_TRADING_ENABLED=false
 ```
+
+Dashboard default bind: `127.0.0.1:8050`.
 
 ## Setup
 
@@ -39,11 +46,24 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-## Run MCP server
+Optional Phase 8 ML backends (XGBoost / scikit-learn). Without them, learning uses a
+deterministic logistic fallback:
 
 ```bash
-python -m crypto_trading_mcp
+pip install -e ".[ml]"
 ```
+
+## Run paper command center
+
+```bash
+# build UI once (optional if using API-only / fallback HTML)
+cd dashboard_ui && npm install && npm run build && cd ..
+
+trader run --demo                 # paper + dashboard + one learning demo cycle (auto-opens browser)
+trader run --no-browser --demo   # same without browser
+```
+
+Dashboard: `http://127.0.0.1:8050`
 
 ## CLI
 
@@ -58,33 +78,22 @@ trader analyze BTC/USD
 trader propose BTC-USD
 trader paper start
 trader paper run BTC/USD --price 50000
-trader paper portfolio
-trader paper performance
-trader paper replay
 trader backtest BTC/USD --strategy momentum_breakout_crypto
 trader walk-forward BTC/USD
-trader benchmark BTC/USD
-trader prediction-backtest
-trader run --no-browser
-trader run --demo
-trader dashboard status
 trader learning status
+trader learning memory
 trader learning calibration
 trader learning brier
-trader learning memory
 trader learning models
 trader learning proposals
+trader dashboard status
 ```
 
-## Dashboard
+## MCP server
 
 ```bash
-cd dashboard_ui && npm install && npm run build
-trader dashboard
-# http://127.0.0.1:8050
+python -m crypto_trading_mcp
 ```
-
-Docs: `docs/DASHBOARD.md`, `docs/OBSERVABILITY.md`, `docs/DASHBOARD_ARCHITECTURE.md`, `docs/DASHBOARD_OPERATIONS.md`, `docs/SELF_LEARNING.md`.
 
 ## Tests
 
@@ -92,36 +101,22 @@ Docs: `docs/DASHBOARD.md`, `docs/OBSERVABILITY.md`, `docs/DASHBOARD_ARCHITECTURE
 pytest -q
 ```
 
+## Security
+
+See `docs/SECURITY.md`. Never commit `.env` or real API keys. Prefer trading-only
+exchange keys with withdrawals disabled if you ever configure live credentials locally.
+
 ## Docs
 
-- `docs/SELF_LEARNING.md`
-- `docs/LEARNING_ARCHITECTURE.md`
-- `docs/MEMORY.md`
-- `docs/POST_MORTEM.md`
-- `docs/CALIBRATION.md`
-- `docs/MODEL_RETRAINING.md`
-- `docs/CHAMPION_CHALLENGER.md`
-- `docs/LEARNING_SAFETY.md`
-- `docs/DRIFT_DETECTION.md`
-- `docs/DASHBOARD.md`
-- `docs/OBSERVABILITY.md`
-- `docs/DASHBOARD_ARCHITECTURE.md`
-- `docs/DASHBOARD_OPERATIONS.md`
-- `docs/BACKTESTING.md`
-- `docs/BACKTESTING_METHODOLOGY.md`
-- `docs/WALK_FORWARD.md`
-- `docs/DATA_VALIDATION.md`
-- `docs/PERFORMANCE_METRICS.md`
-- `docs/PAPER_TRADING.md`
-- `docs/PAPER_TRADING_SAFETY.md`
-- `docs/EXCHANGE_ARCHITECTURE.md`
-- `docs/ORDER_LIFECYCLE.md`
-- `docs/SLIPPAGE_AND_FEES.md`
-- `docs/PREDICTION_MARKETS.md`
-- `docs/OPERATIONS.md`
-- `docs/ARCHITECTURE_AUDIT.md`
+- `docs/SECURITY.md`
+- `docs/ARCHITECTURE.md` → `docs/ARCHITECTURE_AUDIT.md`
 - `docs/AGENTS.md`
-- `docs/STRATEGIES.md`
+- `docs/LLM_PROVIDERS.md`
+- `docs/LOCAL_MAC_SETUP.md`
+- `docs/MCP_TOOLS.md`
+- `docs/PAPER_TRADING.md` / `docs/AUTONOMOUS_TRADING.md`
+- `docs/BACKTESTING.md` / `docs/WALK_FORWARD.md`
+- `docs/DASHBOARD.md` / `docs/OBSERVABILITY.md`
+- `docs/SELF_LEARNING.md` / `docs/LEARNING.md`
 - `docs/RISK_MANAGEMENT.md`
-- `docs/PORTFOLIO.md`
-- `docs/TRADE_PLANNING.md`
+- `docs/OPERATIONS.md` / `docs/TROUBLESHOOTING.md`

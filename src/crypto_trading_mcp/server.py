@@ -14,8 +14,6 @@ mcp = FastMCP(
         allowed_hosts=[
             "127.0.0.1:*",
             "localhost:*",
-            "unknowing-humility-refinance.ngrok-free.dev",
-            "unknowing-humility-refinance.ngrok-free.dev:*",
         ],
     ),
 )
