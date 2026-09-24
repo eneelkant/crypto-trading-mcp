@@ -17,6 +17,8 @@ from crypto_trading_mcp.exchange.prediction import (
     PredictionMarketBook,
 )
 from crypto_trading_mcp.execution.planner import TradePlan
+from crypto_trading_mcp.paper.persistence import InMemoryPaperStore, PaperStore
+from crypto_trading_mcp.paper.session import PaperSession, config_hash, make_session_id
 from crypto_trading_mcp.risk.config import KillSwitch
 from crypto_trading_mcp.risk.correlation import CorrelationFilter
 from crypto_trading_mcp.risk.engine import RiskEngine
@@ -36,11 +38,13 @@ class AgentDecisionRecord:
     compliance_result: dict[str, Any]
     risk_result: dict[str, Any]
     execution_result: dict[str, Any]
+    session_id: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "run_id": self.run_id,
+            "session_id": self.session_id,
             "market_state": self.market_state,
             "strategy_selected": self.strategy_selected,
             "agent_outputs": self.agent_outputs,
@@ -67,45 +71,97 @@ class PaperTradingEngine:
         tax: TaxSimulator | None = None,
         kill_switch: KillSwitch | None = None,
         correlation: CorrelationFilter | None = None,
+        store: PaperStore | None = None,
+        session: PaperSession | None = None,
     ) -> None:
         self.settings = get_settings()
         self.config = load_paper_config()
-        self.exchange = exchange or PaperExchange(config=self.config)
+        paper = self.config.get("paper") or {}
+        prefix = str(paper.get("session_id_prefix", "PAPER_SESSION"))
+        self.session = session or PaperSession(
+            session_id=make_session_id(prefix=prefix, seq=1),
+            started_at=datetime.now(UTC).isoformat(),
+            starting_capital=float(paper.get("initial_cash", 10_000)),
+            config_hash=config_hash(self.config),
+            mode="PAPER",
+        )
+        self.exchange = exchange or PaperExchange(
+            config=self.config, session_id=self.session.session_id
+        )
+        self.exchange.session_id = self.session.session_id
         self.kill_switch = kill_switch or KillSwitch()
         self.risk_engine = risk_engine or RiskEngine(kill_switch=self.kill_switch)
         self.compliance = compliance or CompliancePolicy()
         self.tax = tax or TaxSimulator()
         self.correlation = correlation or CorrelationFilter()
         self.prediction_book = PredictionMarketBook(self.exchange)
+        self.store: PaperStore = store or InMemoryPaperStore()
         self.running = False
         self.decision_log: list[dict[str, Any]] = []
         self.daily_turnover = 0.0
         self.strategy_books: dict[str, list[str]] = {}
         self.return_history: dict[str, list[float]] = {}
+        self.store.save_session(self.session.to_dict())
         self._check_stop_file()
 
     def _check_stop_file(self) -> None:
-        stop_name = self.config.get("paper", {}).get("kill_switch_file", "STOP")
+        stop_name = (self.config.get("paper") or {}).get("kill_switch_file", "STOP")
         stop_path = REPO_ROOT / str(stop_name)
         if stop_path.exists():
             self.kill_switch.activate(f"STOP file detected at {stop_path}")
             self.exchange.halt("KILL_SWITCH_ACTIVE")
+            self.session.status = "KILLED"
+            self.store.save_event(
+                {
+                    "type": "KILL_SWITCH_TRIGGERED",
+                    "session_id": self.session.session_id,
+                    "reason": f"STOP file at {stop_path}",
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
 
     def start(self) -> dict[str, Any]:
         self._check_stop_file()
         if self.settings.trading_mode != "paper" or self.settings.live_trading_enabled:
-            raise RuntimeError("Paper engine requires TRADING_MODE=paper and LIVE_TRADING_ENABLED=false")
+            raise RuntimeError(
+                "Paper engine requires TRADING_MODE=paper and LIVE_TRADING_ENABLED=false"
+            )
+        if self.kill_switch.active:
+            self.running = False
+            return {**self.status(), "note": "Kill switch active; autonomous trading not started"}
         self.running = True
+        self.session.status = "ACTIVE"
         return self.status()
 
     def stop(self) -> dict[str, Any]:
         self.running = False
+        snap = self.exchange.portfolio.snapshot(self.exchange.prices)
+        self.session.complete(snap.equity, status="STOPPED")
+        self.store.save_session(self.session.to_dict())
         return self.status()
+
+    def safe_restart(self) -> dict[str, Any]:
+        """Restart paper trading only after kill-switch file is removed and deactivated."""
+        stop_name = (self.config.get("paper") or {}).get("kill_switch_file", "STOP")
+        stop_path = REPO_ROOT / str(stop_name)
+        if stop_path.exists():
+            return {
+                "restarted": False,
+                "reason": "STOP_FILE_PRESENT",
+                "path": str(stop_path),
+            }
+        if self.kill_switch.active:
+            self.kill_switch.deactivate(operator_authorized=True)
+        self.exchange.reset_halt()
+        self.session.status = "ACTIVE"
+        self.running = True
+        return {"restarted": True, **self.status()}
 
     def status(self) -> dict[str, Any]:
         snap = self.exchange.portfolio.snapshot(self.exchange.prices)
         return {
             "running": self.running,
+            "session": self.session.to_dict(),
             "trading_mode": self.settings.trading_mode,
             "live_trading_enabled": self.settings.live_trading_enabled,
             "kill_switch": self.kill_switch.status().model_dump(),
@@ -122,22 +178,30 @@ class PaperTradingEngine:
         }
 
     def reset(self) -> dict[str, Any]:
-        initial = float(self.config.get("paper", {}).get("initial_cash", 10_000))
-        self.exchange = PaperExchange(config=self.config)
-        self.exchange.portfolio = self.exchange.portfolio.__class__(starting_cash=initial)
+        initial = float((self.config.get("paper") or {}).get("initial_cash", 10_000))
+        prefix = str((self.config.get("paper") or {}).get("session_id_prefix", "PAPER_SESSION"))
+        self.session = PaperSession(
+            session_id=make_session_id(prefix=prefix, seq=int(datetime.now(UTC).timestamp()) % 1000),
+            started_at=datetime.now(UTC).isoformat(),
+            starting_capital=initial,
+            config_hash=config_hash(self.config),
+            mode="PAPER",
+        )
+        self.exchange = PaperExchange(config=self.config, session_id=self.session.session_id)
         self.prediction_book = PredictionMarketBook(self.exchange)
         self.decision_log.clear()
         self.daily_turnover = 0.0
         self.strategy_books.clear()
         self.return_history.clear()
         self.running = False
+        self.store.save_session(self.session.to_dict())
         return self.status()
 
     def select_strategy(self, symbol: str) -> str | None:
         return resolve_strategy_for_symbol(symbol, self.config)
 
     def resolve_conflict(self, symbol: str, new_side: str, strategy_id: str) -> str:
-        mode = str(self.config.get("paper", {}).get("strategy_conflict_mode", "NO_TRADE"))
+        mode = str((self.config.get("paper") or {}).get("strategy_conflict_mode", "NO_TRADE"))
         existing = self.exchange.portfolio.positions.get(symbol.upper())
         if existing is None:
             return "OK"
@@ -148,7 +212,6 @@ class PaperTradingEngine:
                 return "NETTED"
             return "STRATEGY_CONFLICT"
         if existing.side[0] != new_side[0] and existing.side != new_side:
-            # opposing direction
             if mode == "NETTED":
                 return "NETTED"
             return "STRATEGY_CONFLICT"
@@ -162,6 +225,7 @@ class PaperTradingEngine:
         asset_class: str = "CRYPTO",
         analysis: dict[str, Any] | None = None,
         candidate_returns: list[float] | None = None,
+        market_data_stale: bool = False,
     ) -> dict[str, Any]:
         self._check_stop_file()
         run_id = str(uuid4())
@@ -175,7 +239,15 @@ class PaperTradingEngine:
         if self.kill_switch.active or self.exchange.halted:
             return {
                 "executed": False,
-                "reason_codes": ["KILL_SWITCH_ACTIVE" if self.kill_switch.active else "TRADING_HALTED"],
+                "reason_codes": [
+                    "KILL_SWITCH_ACTIVE" if self.kill_switch.active else "TRADING_HALTED"
+                ],
+                "execution_attempted": False,
+            }
+        if market_data_stale:
+            return {
+                "executed": False,
+                "reason_codes": ["STALE_MARKET_DATA"],
                 "execution_attempted": False,
             }
         if plan.status != "PROPOSED" or plan.quantity <= 0:
@@ -241,10 +313,8 @@ class PaperTradingEngine:
             market_data_stale=False,
             bars_since_last_trade=100,
         )
-        # Ensure symbol set
         proposal.symbol = plan.symbol
         risk = self.risk_engine.evaluate(proposal, risk_snap, strategy=None)
-        # Paper path may run strategy stubs without full Phase-4 strategy schema.
         ignore = {"STRATEGY_DATA_UNAVAILABLE"}
         if plan.model_ids:
             ignore.add("NO_VALID_MODEL")
@@ -265,6 +335,15 @@ class PaperTradingEngine:
                 risk.to_dict(),
                 {"executed": False},
             )
+            self.store.save_event(
+                {
+                    "type": "RISK_VALIDATED",
+                    "session_id": self.session.session_id,
+                    "approved": False,
+                    "reason_codes": [c.value for c in risk.reason_codes],
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
             return {
                 "executed": False,
                 "reason_codes": [c.value for c in risk.reason_codes],
@@ -272,6 +351,24 @@ class PaperTradingEngine:
                 "decision_record": record,
                 "execution_attempted": False,
             }
+
+        self.store.save_event(
+            {
+                "type": "RISK_VALIDATED",
+                "session_id": self.session.session_id,
+                "approved": True,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
+        self.store.save_event(
+            {
+                "type": "TRADE_PLANNED",
+                "session_id": self.session.session_id,
+                "strategy_id": plan.strategy_id,
+                "symbol": plan.symbol,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
 
         self.exchange.set_price(plan.symbol, market_price)
         side = OrderSide.BUY if plan.side.upper() in {"LONG", "BUY"} else OrderSide.SELL
@@ -283,21 +380,30 @@ class PaperTradingEngine:
             quantity=plan.quantity,
             strategy_id=plan.strategy_id,
             strategy_version=plan.strategy_version,
+            strategy_config_hash=self.session.config_hash,
             model_ids=plan.model_ids,
             agent_run_id=run_id,
+            session_id=self.session.session_id,
             metadata={
                 "stop_loss": plan.stop_loss,
                 "take_profit": plan.take_profit,
+                "entry_reasoning": (analysis.get("consensus") or {}).get("decision"),
+                "risk_parameters": {
+                    "risk_amount": plan.risk_amount,
+                    "risk_reward_ratio": plan.risk_reward_ratio,
+                },
             },
         )
         filled = self.exchange.create_order(order, market_price=market_price)
         executed = filled.status.value == "FILLED"
+        self.store.save_order(filled.model_dump(mode="json"))
+        for fill in self.exchange.fills[-1:]:
+            self.store.save_fill(fill.model_dump(mode="json"))
         if executed:
             self.daily_turnover += plan.notional
             self.strategy_books.setdefault(plan.strategy_id, []).append(plan.symbol)
             if candidate_returns:
                 self.return_history[plan.symbol] = list(candidate_returns)[-50:]
-            # Configure strategy-specific exits when provided in plan metadata via confluence
             if plan.confluence.get("move_be_at_1r") or plan.strategy_id == "multi_model_po3_vwap":
                 partial = plan.confluence.get("partial_tp_pct", 50)
                 self.exchange.configure_position_rules(
@@ -305,6 +411,7 @@ class PaperTradingEngine:
                     move_be_at_1r=True,
                     partial_tp_pct=float(partial),
                 )
+            self.session.strategy_versions[plan.strategy_id] = plan.strategy_version
 
         tax = self.tax.apply(
             gross_pnl=0.0,
@@ -325,6 +432,12 @@ class PaperTradingEngine:
             risk.to_dict(),
             execution_result,
         )
+        self.store.save_snapshot(
+            {
+                "session_id": self.session.session_id,
+                **self.exchange.portfolio.snapshot(self.exchange.prices).to_dict(),
+            }
+        )
         return {
             "executed": executed,
             "order": filled.model_dump(mode="json"),
@@ -332,8 +445,10 @@ class PaperTradingEngine:
             "compliance": compliance.model_dump(),
             "tax": tax,
             "decision_record": record,
+            "session_id": self.session.session_id,
             "execution_attempted": True,
             "live_trading_enabled": False,
+            "TRADING_MODE": "PAPER",
         }
 
     def _log_decision(
@@ -348,6 +463,7 @@ class PaperTradingEngine:
         messages = analysis.get("messages") or {}
         record = AgentDecisionRecord(
             run_id=run_id,
+            session_id=self.session.session_id,
             market_state={"prices": dict(self.exchange.prices)},
             strategy_selected=plan.strategy_id,
             agent_outputs={k: v for k, v in messages.items()},
@@ -365,13 +481,23 @@ class PaperTradingEngine:
         )
         data = record.to_dict()
         self.decision_log.append(data)
+        self.store.save_event(
+            {
+                "type": "AGENT_ANALYSIS_COMPLETED",
+                "session_id": self.session.session_id,
+                "run_id": run_id,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
         return data
 
     def strategy_book_report(self) -> dict[str, Any]:
         snap = self.exchange.portfolio.snapshot(self.exchange.prices)
         books: dict[str, Any] = {"overall": snap.to_dict(), "strategies": {}}
         for strategy_id, symbols in self.strategy_books.items():
-            positions = [p for p in snap.positions if p.strategy_id == strategy_id or p.symbol in symbols]
+            positions = [
+                p for p in snap.positions if p.strategy_id == strategy_id or p.symbol in symbols
+            ]
             books["strategies"][strategy_id] = {
                 "symbols": symbols,
                 "positions": [p.model_dump(mode="json") for p in positions],
@@ -381,4 +507,7 @@ class PaperTradingEngine:
             ac = self.exchange._asset_class(p.symbol).value
             by_asset.setdefault(ac, []).append(p.model_dump(mode="json"))
         books["asset_classes"] = by_asset
+        books["configured_books"] = list(
+            (self.config.get("strategy_books") or [])
+        )
         return books

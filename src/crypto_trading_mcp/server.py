@@ -172,5 +172,47 @@ def paper_execute_trade(plan: dict[str, Any], market_price: float) -> dict[str, 
     return _paper().paper_execute_trade(plan, market_price)
 
 
+@mcp.tool()
+def run_paper_trade(plan: dict[str, Any], market_price: float) -> dict[str, Any]:
+    """Alias for paper_execute_trade. Simulated capital only."""
+    return paper_execute_trade(plan, market_price)
+
+
+@mcp.tool()
+def get_paper_status() -> dict[str, Any]:
+    """Paper trading engine status."""
+    return _paper().get_paper_status()
+
+
+@mcp.tool()
+def get_paper_orders() -> list[dict[str, Any]]:
+    """Open paper orders."""
+    return _paper().get_paper_orders()
+
+
+@mcp.tool()
+def get_paper_trades() -> list[dict[str, Any]]:
+    """Completed paper trades."""
+    return _paper().get_paper_trades()
+
+
+@mcp.tool()
+def get_paper_portfolio() -> dict[str, Any]:
+    """Paper portfolio snapshot."""
+    return _paper().get_paper_portfolio()
+
+
+@mcp.tool()
+def get_paper_performance() -> dict[str, Any]:
+    """Paper performance metrics."""
+    return _paper().get_paper_performance()
+
+
+@mcp.tool()
+def reset_paper_account() -> dict[str, Any]:
+    """Reset the local paper account (simulated capital only)."""
+    return _paper().reset_paper_account()
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

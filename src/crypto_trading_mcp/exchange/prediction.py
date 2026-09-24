@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
 from pydantic import BaseModel, Field, computed_field
 
-from crypto_trading_mcp.exchange.models import AssetClass, Order, OrderSide, OrderType
+from crypto_trading_mcp.exchange.models import AssetClass, InstrumentMeta, Order, OrderSide, OrderType, SettlementType
 from crypto_trading_mcp.exchange.paper import PaperExchange
+from crypto_trading_mcp.exchange.settlement import (
+    build_settlement_record,
+    prediction_settlement_value,
+)
 
 
 class PredictionContract(BaseModel):
@@ -67,13 +70,12 @@ class PredictionMarketBook:
         self.exchange.set_price(contract.symbol, contract.price)
         self.exchange.instruments[contract.symbol] = self.exchange.instruments.get(
             contract.symbol
-        ) or __import__(
-            "crypto_trading_mcp.exchange.models", fromlist=["InstrumentMeta"]
-        ).InstrumentMeta(
+        ) or InstrumentMeta(
             symbol=contract.symbol,
             asset_class=AssetClass.PREDICTION_CONTRACT,
             tick_size=0.01,
             lot_size=1.0,
+            settlement_type=SettlementType.BINARY,
         )
         return contract
 
@@ -105,9 +107,12 @@ class PredictionMarketBook:
             },
         )
         if attribution:
-            self.attributions[order.order_id] = attribution
+            self.attributions[order.order_id or "pending"] = attribution
             order.metadata["ensemble"] = attribution.model_dump()
-        return self.exchange.create_order(order, market_price=contract.price)
+        filled = self.exchange.create_order(order, market_price=contract.price)
+        if attribution and filled.order_id:
+            self.attributions[filled.order_id] = attribution
+        return filled
 
     def resolve(self, market_id: str, winning_outcome: str) -> list[dict[str, Any]]:
         """Settle all open paper positions for this market using dataset outcome."""
@@ -120,23 +125,17 @@ class PredictionMarketBook:
             contract.winning_outcome = winning
             if symbol not in self.exchange.portfolio.positions:
                 continue
-            pos = self.exchange.portfolio.positions[symbol]
-            # Settlement value: 1.0 if held outcome wins else 0.0
-            outcome = contract.outcome.upper()
-            settlement = 1.0 if outcome == winning else 0.0
-            fee = 0.0
-            pnl = self.exchange.portfolio.close_position(
-                symbol, price=settlement, fee=fee
+            settlement = prediction_settlement_value(
+                held_outcome=contract.outcome, winning_outcome=winning
             )
-            record = {
-                "settlement_id": str(uuid4()),
-                "market_id": market_id,
-                "symbol": symbol,
-                "winning_outcome": winning,
-                "settlement_value": settlement,
-                "pnl": pnl,
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
+            pnl = self.exchange.portfolio.close_position(symbol, price=settlement, fee=0.0)
+            record = build_settlement_record(
+                market_id=market_id,
+                symbol=symbol,
+                winning_outcome=winning,
+                settlement_value=settlement,
+                pnl=pnl,
+            ).to_dict()
             self.settlements.append(record)
             results.append(record)
         return results

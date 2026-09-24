@@ -3,13 +3,20 @@ paper:
   quote_currency: USD
   fees:
     default_rate: 0.001
+    maker_bps: 10
+    taker_bps: 20
   slippage:
+    enabled: true
+    model: fixed_bps
+    default_bps: 5
+    max_bps: 50
     mode: fixed_bps
     value: 5
   strategy_conflict_mode: NO_TRADE  # NO_TRADE | NETTED | SEPARATE_STRATEGY_BOOK
   kill_switch_file: STOP
   max_consecutive_api_failures: 3
   timezone: UTC
+  flatten_at_eod: false
   eod_flat_default: false
 
 instruments:

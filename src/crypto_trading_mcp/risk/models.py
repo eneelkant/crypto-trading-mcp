@@ -37,7 +37,7 @@ class GlobalRiskLimits(BaseModel):
     max_position_pct: float = 0.10
     max_trade_pct: float = 0.02
     max_portfolio_exposure_pct: float = 0.50
-    max_daily_loss_pct: float = 0.03
+    max_daily_loss_pct: float = 0.05
     max_drawdown_pct: float = 0.10
     max_trades_per_day: int = 20
     max_slippage_pct: float = 0.005
@@ -45,6 +45,9 @@ class GlobalRiskLimits(BaseModel):
     require_stop_loss: bool = True
     min_liquidity_usd: float = 100_000
     min_confidence: float = 0.55
+    min_risk_reward: float = 1.5
+    kelly_fraction: float = 0.25
+    max_consecutive_api_failures: int = 3
     allowed_pairs: list[str] = Field(default_factory=list)
 
 

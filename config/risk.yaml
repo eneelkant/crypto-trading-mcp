@@ -2,7 +2,7 @@ risk:
   max_position_pct: 0.10
   max_trade_pct: 0.02
   max_portfolio_exposure_pct: 0.50
-  max_daily_loss_pct: 0.03
+  max_daily_loss_pct: 0.05
   max_drawdown_pct: 0.10
   max_trades_per_day: 20
   max_slippage_pct: 0.005
@@ -10,6 +10,9 @@ risk:
   require_stop_loss: true
   min_liquidity_usd: 100000
   min_confidence: 0.55
+  min_risk_reward: 1.5
+  kelly_fraction: 0.25
+  max_consecutive_api_failures: 3
   allowed_pairs:
     - BTC/USD
     - BTC-USD

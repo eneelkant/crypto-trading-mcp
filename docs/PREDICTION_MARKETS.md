@@ -1,21 +1,26 @@
 # Prediction Markets (Paper)
 
-Simulation only. No Polymarket/Kalshi connectivity.
+Phase 5 simulates `PREDICTION_CONTRACT` instruments locally.
 
-## Contract
+## Contract model
 
-`PREDICT/{market_id}/{YES|NO}` with price/probability in `[0, 1]`.
+- Outcomes: YES / NO
+- Sides: BUY / SELL (including BUY_YES, SELL_YES, BUY_NO, SELL_NO)
+- Price in `[0, 1]`
+- Quantity, resolution date, resolution outcome, settlement value
 
-## Settlement model
+## Settlement
 
-- Dataset supplies `winning_outcome` (`YES`/`NO`).
-- Winning contract settles to `1.0`; losing to `0.0`.
-- Outcomes are never invented by the LLM.
+```text
+YES contract:
+  resolved YES → settlement = 1
+  resolved NO  → settlement = 0
+```
 
-## Edge / ensemble attribution
+Settlement is deterministic and driven only by the simulation dataset outcome.
+No Polymarket or Kalshi APIs are called; adapters exist as future interfaces only.
 
-Trades may record:
+## Ensemble attribution
 
-`market_probability`, `model_probability`, `edge`, provider weights, individual predictions, Brier history.
-
-This is instrumentation — **not** a claim of accuracy.
+Optional model weights (Grok / Claude / GPT / Gemini / DeepSeek) and edge vs market
+probability are stored for later learning; they do not bypass risk controls.

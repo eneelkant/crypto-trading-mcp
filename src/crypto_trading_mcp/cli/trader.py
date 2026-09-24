@@ -110,8 +110,10 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("status", help="Show trading mode and safety flags")
     sub.add_parser("agents", help="List registered analysis agents")
-    sub.add_parser("risk", help="Show effective risk limits and kill-switch status")
-    sub.add_parser("portfolio", help="Show deterministic portfolio snapshot")
+    sub.add_parser("risk", help="Show effective risk limits and kill-switch status (PAPER)")
+    sub.add_parser("portfolio", help="Show deterministic portfolio snapshot (PAPER)")
+    sub.add_parser("trades", help="Show paper trades")
+    sub.add_parser("performance", help="Show paper performance metrics")
 
     analyze = sub.add_parser("analyze", help="Run analysis pipeline (no execution)")
     analyze.add_argument("symbol")
@@ -124,17 +126,19 @@ def main(argv: list[str] | None = None) -> int:
     propose.add_argument("--exchange", default=None)
     propose.add_argument("--json", action="store_true")
 
-    paper = sub.add_parser("paper", help="Paper trading commands")
+    paper = sub.add_parser("paper", help="Paper trading commands (simulated capital only)")
     paper_sub = paper.add_subparsers(dest="paper_command", required=True)
     paper_sub.add_parser("status")
     paper_sub.add_parser("start")
     paper_sub.add_parser("stop")
     paper_sub.add_parser("positions")
+    paper_sub.add_parser("portfolio")
     paper_sub.add_parser("orders")
     paper_sub.add_parser("trades")
     paper_sub.add_parser("performance")
     paper_sub.add_parser("reset")
     paper_sub.add_parser("markets")
+    paper_sub.add_parser("restart")
     run = paper_sub.add_parser("run")
     run.add_argument("symbol")
     run.add_argument("--price", type=float, default=None)
@@ -144,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
     predict.add_argument("--price", type=float, default=0.55)
     predict.add_argument("--model-prob", type=float, default=0.62)
     predict.add_argument("--quantity", type=float, default=10.0)
+    replay = paper_sub.add_parser("replay")
+    replay.add_argument("--symbol", default="BTC/USD")
+    replay.add_argument("--price", type=float, default=100.0)
+    replay.add_argument("--qty", type=float, default=1.0)
 
     args = parser.parse_args(argv)
     settings = get_settings()
@@ -185,7 +193,8 @@ def main(argv: list[str] | None = None) -> int:
         strategy = knowledge.get_strategy()
         _print(
             {
-                "trading_mode": settings.trading_mode,
+                "TRADING_MODE": "PAPER" if settings.trading_mode == "paper" else settings.trading_mode.upper(),
+                "REAL_MONEY": "DISABLED",
                 "live_trading_enabled": settings.live_trading_enabled,
                 "kill_switch": cfg.kill_switch.model_dump(),
                 "global_risk": cfg.risk.model_dump(),
@@ -196,7 +205,29 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "portfolio":
         eng = _engine()
-        _print(eng.exchange.portfolio.snapshot(eng.exchange.prices).to_dict())
+        _print(
+            {
+                **eng.exchange.portfolio.snapshot(eng.exchange.prices).to_dict(),
+                "TRADING_MODE": "PAPER",
+                "REAL_MONEY": "DISABLED",
+            }
+        )
+        return 0
+
+    if args.command == "trades":
+        eng = _engine()
+        _print({"TRADING_MODE": "PAPER", "trades": eng.exchange.trades})
+        return 0
+
+    if args.command == "performance":
+        eng = _engine()
+        _print(
+            {
+                "TRADING_MODE": "PAPER",
+                "REAL_MONEY": "DISABLED",
+                "performance": compute_performance(eng.exchange.trades),
+            }
+        )
         return 0
 
     if args.command == "analyze":
@@ -240,19 +271,38 @@ def main(argv: list[str] | None = None) -> int:
         if cmd == "reset":
             _print(eng.reset())
             return 0
+        if cmd == "restart":
+            _print(eng.safe_restart())
+            return 0
         if cmd == "positions":
-            _print(eng.exchange.get_positions())
+            _print({"TRADING_MODE": "PAPER", "positions": eng.exchange.get_positions()})
+            return 0
+        if cmd == "portfolio":
+            _print(
+                {
+                    **eng.exchange.portfolio.snapshot(eng.exchange.prices).to_dict(),
+                    "TRADING_MODE": "PAPER",
+                    "REAL_MONEY": "DISABLED",
+                }
+            )
             return 0
         if cmd == "orders":
-            _print([o.model_dump(mode="json") for o in eng.exchange.get_open_orders()])
+            _print(
+                {
+                    "TRADING_MODE": "PAPER",
+                    "orders": [o.model_dump(mode="json") for o in eng.exchange.get_open_orders()],
+                }
+            )
             return 0
         if cmd == "trades":
-            _print(eng.exchange.trades)
+            _print({"TRADING_MODE": "PAPER", "trades": eng.exchange.trades})
             return 0
         if cmd == "performance":
             trades = eng.exchange.trades
             _print(
                 {
+                    "TRADING_MODE": "PAPER",
+                    "REAL_MONEY": "DISABLED",
                     "portfolio": compute_performance(trades),
                     "by_strategy": group_performance(trades, "strategy_id"),
                     "by_asset_class": group_performance(trades, "asset_class"),
@@ -262,6 +312,20 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if cmd == "markets":
             _print(eng.prediction_book.list_markets())
+            return 0
+        if cmd == "replay":
+            from crypto_trading_mcp.paper.replay import DeterministicReplay
+
+            plan = _simple_plan(args.symbol, "LONG", args.price, eng.select_strategy(args.symbol) or "momentum_breakout_crypto")
+            plan.quantity = args.qty
+            plan.notional = args.qty * args.price
+            plan.risk_amount = abs(args.price - plan.stop_loss) * args.qty
+            result = DeterministicReplay().run(
+                initial_cash=10_000,
+                prices=[(args.symbol.upper(), args.price)],
+                plans=[plan],
+            )
+            _print({"TRADING_MODE": "PAPER", "replay": result["structural"], "hash": result["structural_hash"]})
             return 0
         if cmd == "run":
             eng.start()

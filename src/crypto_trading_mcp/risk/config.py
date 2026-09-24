@@ -88,13 +88,14 @@ def merge_effective_limits(
         if strat_trades is not None
         else global_limits.max_trades_per_day
     )
+    min_rr = max(global_limits.min_risk_reward, strat_min_rr)
     return {
         "risk_per_trade_pct": risk_per_trade,
         "max_daily_loss_pct": max_daily,
         "max_drawdown_pct": global_limits.max_drawdown_pct,
         "max_trades_per_day": max_trades,
         "cooldown_bars": strat_cooldown,
-        "min_risk_reward": strat_min_rr,
+        "min_risk_reward": min_rr,
         "max_position_pct": global_limits.max_position_pct,
         "max_trade_pct": global_limits.max_trade_pct,
         "max_portfolio_exposure_pct": global_limits.max_portfolio_exposure_pct,
@@ -103,6 +104,8 @@ def merge_effective_limits(
         "require_stop_loss": global_limits.require_stop_loss,
         "min_liquidity_usd": global_limits.min_liquidity_usd,
         "min_confidence": global_limits.min_confidence,
+        "kelly_fraction": global_limits.kelly_fraction,
+        "max_consecutive_api_failures": global_limits.max_consecutive_api_failures,
         "allowed_pairs": list(global_limits.allowed_pairs),
     }
 

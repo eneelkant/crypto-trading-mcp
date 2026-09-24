@@ -1,0 +1,120 @@
+paper_trading:
+  initial_cash: 10000
+  quote_currency: USD
+  flatten_at_eod: false
+  eod_flat_default: false
+  strategy_conflict_mode: NO_TRADE  # NO_TRADE | NETTED | SEPARATE_STRATEGY_BOOK
+  kill_switch_file: STOP
+  max_consecutive_api_failures: 3
+  timezone: UTC
+  session_id_prefix: PAPER_SESSION
+  fees:
+    default_rate: 0.001
+    maker_bps: 10
+    taker_bps: 20
+    by_asset_class: {}
+    by_exchange: {}
+  slippage:
+    enabled: true
+    model: fixed_bps
+    default_bps: 5
+    max_bps: 50
+    percentage: 0.0005
+    volatility_multiplier: 1.0
+    volume_impact: 1.0
+  risk_reference:
+    max_risk_per_trade: 0.01
+    min_risk_reward: 1.5
+    max_portfolio_drawdown: 0.10
+    max_daily_loss: 0.05
+    kelly_fraction: 0.25
+  failure_simulation:
+    enabled: false
+    modes:
+      - timeout
+      - rate_limit
+      - connection_error
+      - rejected_order
+      - partial_fill
+      - stale_market_data
+      - exchange_unavailable
+
+# Legacy alias key for callers expecting `paper:`
+paper:
+  initial_cash: 10000
+  quote_currency: USD
+  flatten_at_eod: false
+  eod_flat_default: false
+  strategy_conflict_mode: NO_TRADE
+  kill_switch_file: STOP
+  max_consecutive_api_failures: 3
+  timezone: UTC
+  fees:
+    default_rate: 0.001
+    maker_bps: 10
+    taker_bps: 20
+  slippage:
+    enabled: true
+    model: fixed_bps
+    default_bps: 5
+    max_bps: 50
+
+instruments:
+  BTC/USD:
+    asset_class: CRYPTO
+    quote_currency: USD
+    tick_size: 0.01
+    lot_size: 0.0001
+    shortable: true
+  BTCUSDT:
+    asset_class: CRYPTO
+    tick_size: 0.01
+    lot_size: 0.0001
+  ETH/USD:
+    asset_class: CRYPTO
+    tick_size: 0.01
+    lot_size: 0.0001
+  SPY:
+    asset_class: ETF
+    tick_size: 0.01
+    lot_size: 1
+  QQQ:
+    asset_class: ETF
+    tick_size: 0.01
+    lot_size: 1
+  GLD:
+    asset_class: COMMODITY
+    tick_size: 0.01
+    lot_size: 1
+  USO:
+    asset_class: COMMODITY
+    tick_size: 0.01
+    lot_size: 1
+  NQ1!:
+    asset_class: FUTURE
+    tick_size: 0.25
+    lot_size: 1
+    contract_multiplier: 20
+    margin_required: 0.1
+
+symbol_strategy_map:
+  BTC/USD: momentum_breakout_crypto
+  BTCUSDT: multi_model_po3_vwap
+  SPY: mean_reversion_equity
+  QQQ: mean_reversion_equity
+  GLD: trend_following_commodities
+  USO: trend_following_commodities
+  PREDICT/*: prediction_market_ai
+
+strategy_books:
+  - MEAN_REVERSION_INDICES
+  - MOMENTUM_BREAKOUT_CRYPTO
+  - TREND_FOLLOWING_COMMODITIES
+  - SMC_ORDER_BLOCK_CONFLUENCE
+  - PO3_VWAP
+  - PREDICTION_MARKETS
+
+benchmarks:
+  - buy_and_hold
+  - dca
+  - simple_moving_average

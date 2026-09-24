@@ -103,7 +103,8 @@ def test_individual_risk_checks(strategy, kwargs, code):
 
 def test_daily_loss_drawdown_trade_count(strategy):
     engine = RiskEngine()
-    d1 = engine.evaluate(_proposal(), _portfolio(daily_pnl=-400), strategy)
+    # 6% daily loss exceeds configured max_daily_loss_pct (5%).
+    d1 = engine.evaluate(_proposal(), _portfolio(daily_pnl=-600), strategy)
     assert RiskReasonCode.DAILY_LOSS_LIMIT in d1.reason_codes
     d2 = engine.evaluate(_proposal(), _portfolio(drawdown_pct=0.2), strategy)
     assert RiskReasonCode.DRAWDOWN_LIMIT in d2.reason_codes
