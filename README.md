@@ -16,12 +16,11 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (6)
+## Current phase (7)
 
-- Offline **historical backtesting** + walk-forward validation on PaperExchange
-- Deterministic fees/slippage/risk identical to paper trading
-- Baselines (Buy&Hold / DCA / SMA), prediction-market evaluation
-- `trader backtest …` / `trader walk-forward …` CLI + MCP tools
+- Live multi-agent **observability dashboard** at `http://127.0.0.1:8050`
+- Event bus + WebSocket streaming for agents, risk, paper fills, Phase 6 backtests
+- `trader run` starts paper runtime + dashboard (optional browser open)
 - **Still no live/authenticated execution**
 
 Defaults:
@@ -66,7 +65,20 @@ trader backtest BTC/USD --strategy momentum_breakout_crypto
 trader walk-forward BTC/USD
 trader benchmark BTC/USD
 trader prediction-backtest
+trader run --no-browser
+trader run --demo
+trader dashboard status
 ```
+
+## Dashboard
+
+```bash
+cd dashboard_ui && npm install && npm run build
+trader dashboard
+# http://127.0.0.1:8050
+```
+
+Docs: `docs/DASHBOARD.md`, `docs/OBSERVABILITY.md`, `docs/DASHBOARD_ARCHITECTURE.md`, `docs/DASHBOARD_OPERATIONS.md`.
 
 ## Tests
 
@@ -76,6 +88,10 @@ pytest -q
 
 ## Docs
 
+- `docs/DASHBOARD.md`
+- `docs/OBSERVABILITY.md`
+- `docs/DASHBOARD_ARCHITECTURE.md`
+- `docs/DASHBOARD_OPERATIONS.md`
 - `docs/BACKTESTING.md`
 - `docs/BACKTESTING_METHODOLOGY.md`
 - `docs/WALK_FORWARD.md`

@@ -153,6 +153,17 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--price", type=float, default=100.0)
     replay.add_argument("--qty", type=float, default=1.0)
 
+    run_cmd = sub.add_parser("run", help="Start paper runtime + dashboard (no live trading)")
+    run_cmd.add_argument("--no-browser", action="store_true")
+    run_cmd.add_argument("--demo", action="store_true", help="Run one paper demo cycle after start")
+
+    dash = sub.add_parser("dashboard", help="Dashboard control")
+    dash_sub = dash.add_subparsers(dest="dashboard_command")
+    dash_sub.add_parser("start")
+    dash_sub.add_parser("stop")
+    dash_sub.add_parser("status")
+    dash_sub.add_parser("open")
+
     backtest = sub.add_parser("backtest", help="Historical backtest (offline / paper only)")
     backtest.add_argument("symbol")
     backtest.add_argument("--strategy", default="momentum_breakout_crypto")
@@ -189,8 +200,9 @@ def main(argv: list[str] | None = None) -> int:
                 "trading_mode": settings.trading_mode,
                 "live_trading_enabled": settings.live_trading_enabled,
                 "real_money": False,
-                "phase": 6,
-                "note": "Paper exchange + offline backtesting; live execution disabled.",
+                "phase": 7,
+                "note": "Paper trading + observability dashboard; live execution disabled.",
+                "dashboard": "http://127.0.0.1:8050",
                 "TRADING_MODE": "PAPER",
                 "REAL_MONEY": "DISABLED",
             }
@@ -411,6 +423,66 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print(order.model_dump(mode="json"))
             return 0
+
+    if args.command in {"run", "dashboard"}:
+        from crypto_trading_mcp.dashboard.browser import open_dashboard_browser
+        from crypto_trading_mcp.dashboard.config import load_dashboard_config
+        from crypto_trading_mcp.dashboard.cycle import run_paper_demo_cycle
+        from crypto_trading_mcp.dashboard.runtime import get_dashboard_server
+        from crypto_trading_mcp.dashboard.state import get_dashboard_state
+
+        cfg = load_dashboard_config()
+        server = get_dashboard_server()
+
+        if args.command == "dashboard":
+            cmd = args.dashboard_command or "start"
+            if cmd == "stop":
+                _print(server.stop())
+                return 0
+            if cmd == "status":
+                _print(server.status())
+                return 0
+            if cmd == "open":
+                _print(open_dashboard_browser(cfg, force=True))
+                return 0
+            # start / default
+            result = server.start(open_browser=True)
+            _print(result)
+            return 0
+
+        # trader run
+        state = get_dashboard_state()
+        paper = state.paper
+        print("AI Trading System")
+        print("────────────────────────────────")
+        print()
+        print("Mode: PAPER")
+        print(f"Dashboard: {cfg.url}")
+        print()
+        dash = server.start(open_browser=not args.no_browser)
+        paper.start()
+        print("Market Data: ONLINE")
+        print("Risk Engine: ONLINE")
+        print("Portfolio: ONLINE")
+        print("Paper Exchange: ONLINE")
+        print("Event Bus: ONLINE")
+        print()
+        print(f"LLM Provider: {settings.llm_provider.upper()}")
+        print(f"Agents: {len(state.agents)} READY")
+        print()
+        if (dash.get("browser") or {}).get("opened"):
+            print("Dashboard opened in browser.")
+        elif args.no_browser:
+            print("Dashboard browser open skipped (--no-browser).")
+        else:
+            print(f"Dashboard browser: {dash.get('browser')}")
+        print("LIVE TRADING: DISABLED")
+        if args.demo:
+            demo = run_paper_demo_cycle(state=state)
+            _print({"demo": demo, "dashboard": dash})
+        else:
+            _print({"dashboard": dash, "paper": paper.status(), "TRADING_MODE": "PAPER"})
+        return 0
 
     # --- Phase 6 backtesting (offline) ---
     if args.command in {

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crypto-trading-mcp"
-version = "0.6.0"
-description = "Multi-agent analysis with paper exchange and offline backtesting (live disabled)"
+version = "0.7.0"
+description = "Multi-agent paper trading with dashboard observability (live disabled)"
 requires-python = ">=3.12"
 dependencies = [
   "mcp>=1,<2",
@@ -15,6 +15,9 @@ dependencies = [
   "pydantic>=2",
   "pydantic-settings>=2",
   "pyyaml",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "websockets>=12",
 ]
 
 [project.optional-dependencies]

@@ -17,3 +17,5 @@ data/
 *.sqlite3
 reports/backtests/
 STOP
+dashboard_ui/node_modules/
+dashboard_ui/dist/
