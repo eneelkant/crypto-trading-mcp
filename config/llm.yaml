@@ -1,0 +1,38 @@
+llm:
+  default_provider: mock
+  default_model: mock-analyst
+  fallback_providers: []
+  # When no usable LLM is available, agents must not invent market facts.
+  fail_closed_on_llm_error: true
+
+agents:
+  market_intelligence:
+    provider: mock
+    model: mock-analyst
+  technical_analysis:
+    provider: mock
+    model: mock-analyst
+  trend:
+    provider: mock
+    model: mock-analyst
+  sentiment:
+    provider: mock
+    model: mock-analyst
+  on_chain:
+    provider: mock
+    model: mock-analyst
+  macro_event:
+    provider: mock
+    model: mock-analyst
+  strategy:
+    provider: mock
+    model: mock-analyst
+  bull:
+    provider: mock
+    model: mock-analyst
+  bear:
+    provider: mock
+    model: mock-analyst
+  consensus:
+    provider: mock
+    model: mock-analyst

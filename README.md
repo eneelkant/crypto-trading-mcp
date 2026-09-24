@@ -1,24 +1,68 @@
 # Crypto Trading MCP
 
-A read-only MCP server for public crypto market prices and swap-profit estimates.
+Experimental multi-agent crypto **market analysis** platform with an MCP server.
+
+```text
+This software is experimental trading infrastructure.
+
+Cryptocurrency trading involves substantial risk.
+
+Past performance and backtesting do not guarantee future results.
+
+Live trading is disabled by default.
+
+Autonomous trading can result in financial loss.
+
+Users are responsible for determining whether and how to use live trading.
+```
+
+## Current phase (3)
+
+- MCP read-only tools: public spot price + swap profit estimate
+- Agent framework + LLM router (mock/Ollama/OpenAI/Anthropic/Gemini)
+- Ten analysis agents (market → consensus)
+- **No trade execution, no Coinbase trading, no wallet ops**
+
+Defaults:
+
+```env
+TRADING_MODE=paper
+LIVE_TRADING_ENABLED=false
+LLM_PROVIDER=mock
+```
 
 ## Setup
 
 ```bash
-pip install -e .
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env
 ```
 
-## Run locally
+## Run MCP server
 
 ```bash
 python -m crypto_trading_mcp
 ```
 
-The server uses standard input/output for MCP clients such as Claude Desktop.
+## CLI
 
-## Tools
+```bash
+trader status
+trader agents
+trader analyze BTC/USD
+```
 
-- `get_spot_price(symbol, exchange_id="kraken")` — retrieves public spot-market data.
-- `estimate_swap_profit(...)` — estimates net profit after trading and network fees.
+## Tests
 
-This server does not store exchange credentials, execute trades, or move funds.
+```bash
+pytest
+```
+
+## Docs
+
+- `docs/ARCHITECTURE_AUDIT.md`
+- `docs/AGENTS.md`
+- `docs/MARKET_INTELLIGENCE.md`
+- `docs/ANALYSIS_AGENTS.md`

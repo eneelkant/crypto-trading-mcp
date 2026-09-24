@@ -1,0 +1,18 @@
+trading_mode: paper
+live_trading_enabled: false
+
+market_data:
+  default_exchange_id: kraken
+  # Public read-only exchanges only. Never construct authenticated clients from tool args.
+  allowed_exchanges:
+    - kraken
+    - coinbase
+    - binance
+    - bitstamp
+    - gemini
+  default_timeframe: 1h
+  ohlcv_limit: 120
+  max_age_seconds: 120
+
+analysis:
+  minimum_confidence_for_direction: 0.55
