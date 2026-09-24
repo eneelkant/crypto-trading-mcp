@@ -1,0 +1,52 @@
+self_learning:
+  enabled: true
+
+  memory:
+    enabled: true
+    failure_log: references/failure_log.json
+    similarity_threshold: 0.80
+    max_retrieved_cases: 5
+
+  post_mortem:
+    enabled: true
+    trigger: ON_TRADE_CLOSE
+
+  calibration:
+    rolling_window_trades: 50
+    max_acceptable_brier_score: 0.25
+
+  retraining:
+    enabled: true
+    interval_trades: 100
+    model: XGBoost_Classifier
+    optional_model: RandomForest
+    validation: OUT_OF_SAMPLE_WALK_FORWARD
+    min_sample_size: 20
+
+  kelly:
+    base_fraction: 0.25
+    degraded_fraction: 0.125
+    min_multiplier: 0.25
+    max_multiplier: 1.0
+
+  regime:
+    enabled: true
+
+  drift:
+    enabled: true
+    brier_degrade_delta: 0.05
+    winrate_degrade_delta: 0.15
+
+  safety:
+    automatic_live_deployment: false
+    learning_can_modify_hard_risk_limits: false
+    learning_can_disable_kill_switch: false
+    learning_can_create_exchange_orders: false
+
+  reflection:
+    enabled: true
+    after_every_trade: true
+
+disclaimer: >
+  Learning is subordinate to the deterministic RiskEngine.
+  Learning cannot enable live trading or bypass hard risk limits.

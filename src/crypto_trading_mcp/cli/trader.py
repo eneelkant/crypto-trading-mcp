@@ -191,6 +191,27 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("prediction-backtest", help="Run prediction-market evaluation fixture")
 
+    learn = sub.add_parser("learning", help="Self-learning engine (paper only)")
+    learn_sub = learn.add_subparsers(dest="learning_command")
+    for name in (
+        "status",
+        "memory",
+        "failures",
+        "successes",
+        "calibration",
+        "brier",
+        "models",
+        "proposals",
+        "reflect",
+        "retrain",
+        "validate",
+        "champion",
+        "challenger",
+        "audit",
+        "rollback",
+    ):
+        learn_sub.add_parser(name)
+
     args = parser.parse_args(argv)
     settings = get_settings()
 
@@ -200,11 +221,12 @@ def main(argv: list[str] | None = None) -> int:
                 "trading_mode": settings.trading_mode,
                 "live_trading_enabled": settings.live_trading_enabled,
                 "real_money": False,
-                "phase": 7,
-                "note": "Paper trading + observability dashboard; live execution disabled.",
+                "phase": 8,
+                "note": "Paper trading + dashboard + self-learning; live execution disabled.",
                 "dashboard": "http://127.0.0.1:8050",
                 "TRADING_MODE": "PAPER",
                 "REAL_MONEY": "DISABLED",
+                "Live Execution": "DISABLED",
             }
         )
         return 0
@@ -423,6 +445,54 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print(order.model_dump(mode="json"))
             return 0
+
+    if args.command == "learning":
+        from crypto_trading_mcp.learning.engine import get_learning_engine
+
+        eng = get_learning_engine()
+        cmd = args.learning_command or "status"
+        if cmd == "status":
+            _print(eng.status())
+        elif cmd == "memory":
+            _print({"summary": eng.memory.summary(), "records": [r.to_dict() for r in eng.memory.records[-20:]]})
+        elif cmd == "failures":
+            _print([r.to_dict() for r in eng.memory.failures()[-20:]])
+        elif cmd == "successes":
+            _print([r.to_dict() for r in eng.memory.successes()[-20:]])
+        elif cmd in {"calibration", "brier"}:
+            _print(eng.calibration.status())
+        elif cmd == "models":
+            _print({"versions": eng.registry.list()})
+        elif cmd == "proposals":
+            _print({"proposals": eng.proposals.list()})
+        elif cmd == "reflect":
+            if not eng.memory.records:
+                _print({"ok": False, "reason": "no_records"})
+            else:
+                from crypto_trading_mcp.learning.post_mortem import run_post_mortem
+
+                rec = eng.memory.records[-1]
+                pm = run_post_mortem(rec)
+                reflection = eng.reflection.reflect(rec, pm)
+                eng.reflections.append(reflection.to_dict())
+                _print(reflection.to_dict())
+        elif cmd == "retrain":
+            _print(eng.run_retraining(seed=42))
+        elif cmd == "validate":
+            _print(eng.validate_learning())
+        elif cmd == "champion":
+            c = eng.registry.champion()
+            _print({"champion": None if c is None else c.to_dict()})
+        elif cmd == "challenger":
+            c = eng.registry.challenger()
+            _print({"challenger": None if c is None else c.to_dict()})
+        elif cmd == "audit":
+            _print({"events": eng.audit.list()})
+        elif cmd == "rollback":
+            _print(eng.rollback_candidate("cli_rollback"))
+        else:
+            _print(eng.status())
+        return 0
 
     if args.command in {"run", "dashboard"}:
         from crypto_trading_mcp.dashboard.browser import open_dashboard_browser

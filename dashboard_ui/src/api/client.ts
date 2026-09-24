@@ -47,4 +47,11 @@ export const dashboardApi = {
     return res.json();
   },
   post: (path: string) => api<Record<string, unknown>>(path, { method: "POST" }),
+  learningStatus: () => api<Record<string, unknown>>("/learning/status"),
+  learningMemory: () => api<Record<string, unknown>>("/learning/memory"),
+  learningCalibration: () => api<Record<string, unknown>>("/learning/calibration"),
+  learningModels: () => api<Record<string, unknown>>("/learning/models"),
+  learningProposals: () => api<Record<string, unknown>>("/learning/proposals"),
+  learningDrift: () => api<Record<string, unknown>>("/learning/drift"),
+  learningAudit: () => api<Record<string, unknown>>("/learning/audit"),
 };

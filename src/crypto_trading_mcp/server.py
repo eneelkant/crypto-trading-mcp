@@ -283,5 +283,132 @@ def run_prediction_backtest(rows: list[dict[str, Any]] | None = None) -> dict[st
     return _backtest().run_prediction_backtest(rows)
 
 
+# --- Phase 8 learning tools (paper / read-only; never place orders) ---
+_learning_tools = None
+
+
+def _learning():
+    global _learning_tools
+    if _learning_tools is None:
+        from crypto_trading_mcp.mcp_tools.learning import LearningToolSurface
+
+        _learning_tools = LearningToolSurface()
+    return _learning_tools
+
+
+@mcp.tool()
+def get_learning_status() -> dict[str, Any]:
+    """Self-learning engine status (paper mode)."""
+    return _learning().get_learning_status()
+
+
+@mcp.tool()
+def get_learning_memory() -> dict[str, Any]:
+    """Learning memory records."""
+    return _learning().get_learning_memory()
+
+
+@mcp.tool()
+def search_learning_memory(features: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Similarity search over learning memory. Does not veto trades."""
+    return _learning().search_learning_memory(features)
+
+
+@mcp.tool()
+def get_trade_postmortem(trade_id: str | None = None) -> dict[str, Any]:
+    """Fetch trade post-mortem."""
+    return _learning().get_trade_postmortem(trade_id)
+
+
+@mcp.tool()
+def get_failure_patterns() -> dict[str, Any]:
+    """Aggregated failure patterns from memory."""
+    return _learning().get_failure_patterns()
+
+
+@mcp.tool()
+def get_success_patterns() -> dict[str, Any]:
+    """Aggregated success patterns from memory."""
+    return _learning().get_success_patterns()
+
+
+@mcp.tool()
+def get_calibration() -> dict[str, Any]:
+    """Rolling calibration / Brier status."""
+    return _learning().get_calibration()
+
+
+@mcp.tool()
+def get_brier_score() -> dict[str, Any]:
+    """Rolling Brier score."""
+    return _learning().get_brier_score()
+
+
+@mcp.tool()
+def get_model_status() -> dict[str, Any]:
+    """Champion / challenger model status."""
+    return _learning().get_model_status()
+
+
+@mcp.tool()
+def get_model_versions() -> dict[str, Any]:
+    """Model version registry."""
+    return _learning().get_model_versions()
+
+
+@mcp.tool()
+def get_learning_proposals() -> dict[str, Any]:
+    """Learning proposals and statuses."""
+    return _learning().get_learning_proposals()
+
+
+@mcp.tool()
+def get_champion_strategy() -> dict[str, Any]:
+    """Current champion model/strategy candidate."""
+    return _learning().get_champion_strategy()
+
+
+@mcp.tool()
+def get_challenger_strategy() -> dict[str, Any]:
+    """Current challenger model/strategy candidate."""
+    return _learning().get_challenger_strategy()
+
+
+@mcp.tool()
+def run_postmortem(record: dict[str, Any]) -> dict[str, Any]:
+    """Run post-mortem on a closed paper trade record. Never places orders."""
+    return _learning().run_postmortem(record)
+
+
+@mcp.tool()
+def run_reflection() -> dict[str, Any]:
+    """Run structured reflection on latest learning record."""
+    return _learning().run_reflection()
+
+
+@mcp.tool()
+def run_retraining() -> dict[str, Any]:
+    """Train challenger model (optional XGBoost/RF; fallback logistic). Paper only."""
+    return _learning().run_retraining()
+
+
+@mcp.tool()
+def run_learning_validation(proposal_id: str | None = None) -> dict[str, Any]:
+    """Validate a learning proposal / current champion state."""
+    return _learning().run_learning_validation(proposal_id)
+
+
+@mcp.tool()
+def get_learning_audit(limit: int = 100) -> dict[str, Any]:
+    """Learning audit trail."""
+    return _learning().get_learning_audit(limit)
+
+
+@mcp.tool()
+def rollback_learning_candidate(reason: str = "manual") -> dict[str, Any]:
+    """Rollback to champion; never enables live trading."""
+    return _learning().rollback_learning_candidate(reason)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

@@ -19,3 +19,4 @@ reports/backtests/
 STOP
 dashboard_ui/node_modules/
 dashboard_ui/dist/
+references/failure_log.json

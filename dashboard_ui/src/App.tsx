@@ -3,7 +3,20 @@ import { dashboardApi, type AgentView } from "./api/client";
 import { MarketChart } from "./components/MarketChart";
 import { useEventStream } from "./hooks/useEventStream";
 
-type Tab = "portfolio" | "backtests" | "walkforward" | "llm" | "mcp" | "health";
+type Tab =
+  | "portfolio"
+  | "backtests"
+  | "walkforward"
+  | "llm"
+  | "mcp"
+  | "health"
+  | "learning"
+  | "failures"
+  | "calibration"
+  | "models"
+  | "proposals"
+  | "drift"
+  | "audit";
 
 export default function App() {
   const [agents, setAgents] = useState<AgentView[]>([]);
@@ -11,7 +24,7 @@ export default function App() {
   const [risk, setRisk] = useState<Record<string, unknown>>({});
   const [market, setMarket] = useState<Record<string, unknown>>({});
   const [panel, setPanel] = useState<Record<string, unknown>>({});
-  const [tab, setTab] = useState<Tab>("portfolio");
+  const [tab, setTab] = useState<Tab>("learning");
   const { connected, events } = useEventStream();
 
   const refresh = useCallback(async () => {
@@ -41,6 +54,13 @@ export default function App() {
       if (tab === "llm") setPanel(await dashboardApi.llm());
       if (tab === "mcp") setPanel({ activity: await dashboardApi.mcp() });
       if (tab === "health") setPanel(await dashboardApi.health());
+      if (tab === "learning") setPanel(await dashboardApi.learningStatus());
+      if (tab === "failures") setPanel(await dashboardApi.learningMemory());
+      if (tab === "calibration") setPanel(await dashboardApi.learningCalibration());
+      if (tab === "models") setPanel(await dashboardApi.learningModels());
+      if (tab === "proposals") setPanel(await dashboardApi.learningProposals());
+      if (tab === "drift") setPanel(await dashboardApi.learningDrift());
+      if (tab === "audit") setPanel(await dashboardApi.learningAudit());
     };
     load().catch(console.error);
   }, [tab, events.length]);
@@ -135,10 +155,17 @@ export default function App() {
         </section>
 
         <section className="panel wide">
-          <h2>Portfolio · Backtests · LLM · MCP · Health</h2>
+          <h2>Portfolio · Learning · Models · Drift · Audit</h2>
           <div className="tabs">
             {(
               [
+                ["learning", "Learning"],
+                ["failures", "Memory"],
+                ["calibration", "Calibration"],
+                ["models", "Models"],
+                ["proposals", "Proposals"],
+                ["drift", "Drift"],
+                ["audit", "Audit"],
                 ["portfolio", "Portfolio"],
                 ["backtests", "Backtests"],
                 ["walkforward", "Walk-Forward"],

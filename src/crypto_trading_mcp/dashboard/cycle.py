@@ -4,10 +4,13 @@ import time
 from typing import Any
 from uuid import uuid4
 
+from crypto_trading_mcp.backtest.data import generate_synthetic_candles
 from crypto_trading_mcp.dashboard.event_bus import EventBus, get_event_bus
 from crypto_trading_mcp.dashboard.events import EventType
 from crypto_trading_mcp.dashboard.state import AgentRuntimeStatus, DashboardState, get_dashboard_state
 from crypto_trading_mcp.execution.planner import TradePlan
+from crypto_trading_mcp.learning.engine import get_learning_engine
+from crypto_trading_mcp.learning.models import TradeLearningRecord, TradeOutcome
 
 
 def run_paper_demo_cycle(
@@ -24,11 +27,19 @@ def run_paper_demo_cycle(
     """
     state = state or get_dashboard_state()
     bus = bus or get_event_bus()
+    learning = get_learning_engine()
     run_id = str(uuid4())
     symbol = symbol.upper()
 
+    candles = generate_synthetic_candles(symbol=symbol, timeframe="1h", n=80, seed=42)
+    learning_ctx = learning.learning_context_for(candles)
+
     pipeline = [
-        ("market_intelligence", EventType.MARKET_DATA_UPDATED, {"regime": "TRENDING", "confidence": 0.7}),
+        (
+            "market_intelligence",
+            EventType.MARKET_DATA_UPDATED,
+            {"regime": learning_ctx.get("regime", "TRENDING"), "confidence": 0.7, "learning_context": learning_ctx},
+        ),
         ("technical_analysis", EventType.TECHNICAL_ANALYSIS_UPDATED, {"rsi": 58, "ema_alignment": True}),
         ("trend", EventType.AGENT_COMPLETED, {"decision": "BULLISH", "confidence": 0.68}),
         ("sentiment", EventType.AGENT_COMPLETED, {"decision": "NEUTRAL", "confidence": 0.55}),
@@ -42,6 +53,7 @@ def run_paper_demo_cycle(
                 "confidence": 0.71,
                 "strategy": "MOMENTUM_BREAKOUT_CRYPTO",
                 "reason_codes": ["DONCHIAN_BREAKOUT", "VOLUME_CONFIRMATION", "TREND_ALIGNMENT"],
+                "learning_caution": learning_ctx.get("recommended_caution"),
             },
         ),
         (
@@ -57,7 +69,7 @@ def run_paper_demo_cycle(
         (
             "consensus",
             EventType.CONSENSUS_GENERATED,
-            {"decision": "BUY", "confidence": 0.70, "agreement": "2/3"},
+            {"decision": "BUY", "confidence": 0.70, "agreement": "2/3", "learning_context": learning_ctx},
         ),
     ]
 
@@ -143,15 +155,62 @@ def run_paper_demo_cycle(
         bus.emit(EventType.PORTFOLIO_UPDATED, payload=state.portfolio_view(), run_id=run_id)
         bus.emit(EventType.PNL_UPDATED, payload={"equity": state.portfolio_view().get("equity")}, run_id=run_id)
         state.set_agent_status("portfolio_manager", AgentRuntimeStatus.COMPLETED)
+
+        # Close trade + Phase 8 learning lifecycle
+        exit_price = price * 1.04
+        bus.emit(
+            EventType.POSITION_CLOSED,
+            payload={"symbol": symbol, "exit_price": exit_price, "net_pnl": (exit_price - price) * plan.quantity},
+            agent_id="portfolio_manager",
+            run_id=run_id,
+            symbol=symbol,
+        )
+        from crypto_trading_mcp.learning.features import extract_features
+        from crypto_trading_mcp.learning.regime import detect_regime
+
+        features = extract_features(candles)
+        record = TradeLearningRecord(
+            trade_id=f"DEMO-{run_id[:8]}",
+            strategy_id=plan.strategy_id,
+            strategy_version=plan.strategy_version,
+            model_id="demo",
+            model_version="champion",
+            symbol=symbol,
+            timeframe="1h",
+            market_regime=detect_regime(candles),
+            features={k: v for k, v in features.items() if not isinstance(v, str)},
+            side="LONG",
+            entry_price=price,
+            exit_price=exit_price,
+            quantity=plan.quantity,
+            stop_loss=plan.stop_loss,
+            take_profit=plan.take_profit,
+            gross_pnl=(exit_price - price) * plan.quantity,
+            fees=0.01,
+            slippage=0.001,
+            net_pnl=(exit_price - price) * plan.quantity - 0.01,
+            predicted_probability=0.70,
+            consensus_confidence=0.70,
+            kelly_multiplier=float(learning.kelly_adapt(0.70)["kelly_multiplier"]),
+            risk_decision="APPROVED",
+            execution_quality="GOOD",
+            outcome=TradeOutcome.WIN,
+        )
+        learn_out = learning.on_trade_close(record)
         state.set_agent_status(
             "performance_judge",
             AgentRuntimeStatus.COMPLETED,
-            decision={"note": "Paper metrics only"},
+            decision={"note": "Paper metrics only", "brier": learn_out.get("post_mortem", {}).get("brier_score")},
         )
         state.set_agent_status(
             "reflection",
             AgentRuntimeStatus.COMPLETED,
-            decision={"hooks": "recorded", "auto_optimize": False},
+            decision={
+                "hooks": "recorded",
+                "auto_optimize": False,
+                "lesson": (learn_out.get("post_mortem") or {}).get("lesson"),
+                "proposal": (learn_out.get("proposal") or {}).get("proposal_id"),
+            },
         )
     else:
         bus.emit(
@@ -171,6 +230,9 @@ def run_paper_demo_cycle(
         "run_id": run_id,
         "executed": approved,
         "result": result,
+        "learning": learning.status() if approved else None,
+        "learning_context": learning_ctx,
         "TRADING_MODE": "PAPER",
         "LIVE_TRADING_ENABLED": False,
+        "Live Execution": "DISABLED",
     }

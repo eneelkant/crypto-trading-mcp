@@ -45,3 +45,8 @@ Browser never talks to exchanges directly.
 ## Security
 
 Binds to `127.0.0.1` by default. Secrets, API keys, private prompts, and chain-of-thought are sanitized from events.
+
+## Phase 8 Learning Panels
+
+Tabs: Learning overview, Memory, Calibration, Models, Proposals, Drift, Audit.
+API: `/api/learning/*`. Events stream via existing WebSocket.

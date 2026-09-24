@@ -13,3 +13,7 @@ Event examples: `AgentStarted`, `StrategySignalGenerated`, `ConsensusGenerated`,
 - No credentials in logs/events
 - Dashboard failure must not stop trading
 - Live trading cannot be enabled from the UI
+
+Learning events: `LearningStarted`, `TradePostmortemCompleted`, `BrierUpdated`,
+`CalibrationUpdated`, `DriftDetected`, `ReflectionCompleted`, `ChallengerValidated`,
+`LearningProposalCreated`, etc.

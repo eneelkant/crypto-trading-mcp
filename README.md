@@ -16,11 +16,11 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (7)
+## Current phase (8)
 
-- Live multi-agent **observability dashboard** at `http://127.0.0.1:8050`
-- Event bus + WebSocket streaming for agents, risk, paper fills, Phase 6 backtests
-- `trader run` starts paper runtime + dashboard (optional browser open)
+- Self-learning engine: post-mortem, memory, Brier/calibration, Kelly adaptation,
+  regime detection, optional ML retraining, champion/challenger, proposals, drift
+- Learning panels on the existing dashboard (`http://127.0.0.1:8050`)
 - **Still no live/authenticated execution**
 
 Defaults:
@@ -68,6 +68,12 @@ trader prediction-backtest
 trader run --no-browser
 trader run --demo
 trader dashboard status
+trader learning status
+trader learning calibration
+trader learning brier
+trader learning memory
+trader learning models
+trader learning proposals
 ```
 
 ## Dashboard
@@ -78,7 +84,7 @@ trader dashboard
 # http://127.0.0.1:8050
 ```
 
-Docs: `docs/DASHBOARD.md`, `docs/OBSERVABILITY.md`, `docs/DASHBOARD_ARCHITECTURE.md`, `docs/DASHBOARD_OPERATIONS.md`.
+Docs: `docs/DASHBOARD.md`, `docs/OBSERVABILITY.md`, `docs/DASHBOARD_ARCHITECTURE.md`, `docs/DASHBOARD_OPERATIONS.md`, `docs/SELF_LEARNING.md`.
 
 ## Tests
 
@@ -88,6 +94,15 @@ pytest -q
 
 ## Docs
 
+- `docs/SELF_LEARNING.md`
+- `docs/LEARNING_ARCHITECTURE.md`
+- `docs/MEMORY.md`
+- `docs/POST_MORTEM.md`
+- `docs/CALIBRATION.md`
+- `docs/MODEL_RETRAINING.md`
+- `docs/CHAMPION_CHALLENGER.md`
+- `docs/LEARNING_SAFETY.md`
+- `docs/DRIFT_DETECTION.md`
 - `docs/DASHBOARD.md`
 - `docs/OBSERVABILITY.md`
 - `docs/DASHBOARD_ARCHITECTURE.md`

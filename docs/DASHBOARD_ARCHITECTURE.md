@@ -20,3 +20,8 @@ Data sources reused (not duplicated):
 
 - PaperTradingEngine / PaperExchange / Portfolio / RiskEngine
 - BacktestEngine / BacktestStore / WalkForward / Baselines / Metrics
+
+## Learning integration
+
+`routes.py` exposes `/learning/*`. `cycle.py` runs post-mortem after demo close.
+Learning engine publishes to the same EventBus; no second dashboard process.

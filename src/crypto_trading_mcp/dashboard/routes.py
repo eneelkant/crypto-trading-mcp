@@ -326,3 +326,83 @@ def demo_cycle(symbol: str = "BTC/USD", price: float = 100.0) -> dict[str, Any]:
     from crypto_trading_mcp.dashboard.cycle import run_paper_demo_cycle
 
     return run_paper_demo_cycle(symbol=symbol, price=price)
+
+
+def _learning():
+    from crypto_trading_mcp.learning.engine import get_learning_engine
+
+    return get_learning_engine()
+
+
+@router.get("/learning/status")
+def learning_status() -> dict[str, Any]:
+    return _learning().status()
+
+
+@router.get("/learning/memory")
+def learning_memory() -> dict[str, Any]:
+    eng = _learning()
+    return {
+        "summary": eng.memory.summary(),
+        "failures": [r.to_dict() for r in eng.memory.failures()[-20:]],
+        "successes": [r.to_dict() for r in eng.memory.successes()[-20:]],
+    }
+
+
+@router.get("/learning/calibration")
+def learning_calibration() -> dict[str, Any]:
+    return _learning().calibration.status()
+
+
+@router.get("/learning/brier")
+def learning_brier() -> dict[str, Any]:
+    return _learning().calibration.status()
+
+
+@router.get("/learning/models")
+def learning_models() -> dict[str, Any]:
+    eng = _learning()
+    return {
+        "versions": eng.registry.list(),
+        "champion": None if eng.registry.champion() is None else eng.registry.champion().to_dict(),
+        "challenger": None if eng.registry.challenger() is None else eng.registry.challenger().to_dict(),
+    }
+
+
+@router.get("/learning/proposals")
+def learning_proposals() -> dict[str, Any]:
+    return {"proposals": _learning().proposals.list()}
+
+
+@router.get("/learning/drift")
+def learning_drift() -> dict[str, Any]:
+    return _learning().drift.status()
+
+
+@router.get("/learning/audit")
+def learning_audit(limit: int = 100) -> dict[str, Any]:
+    return {"events": _learning().audit.list(limit=limit)}
+
+
+@router.get("/learning/reflections")
+def learning_reflections() -> dict[str, Any]:
+    return {"reflections": _learning().reflections[-20:]}
+
+
+@router.post("/actions/run-reflection")
+def run_reflection() -> dict[str, Any]:
+    eng = _learning()
+    if not eng.memory.records:
+        return {"ok": False, "reason": "no_records"}
+    rec = eng.memory.records[-1]
+    from crypto_trading_mcp.learning.post_mortem import run_post_mortem
+
+    pm = run_post_mortem(rec)
+    reflection = eng.reflection.reflect(rec, pm)
+    eng.reflections.append(reflection.to_dict())
+    return reflection.to_dict()
+
+
+@router.post("/actions/run-retraining")
+def run_retraining() -> dict[str, Any]:
+    return _learning().run_retraining(seed=42)
