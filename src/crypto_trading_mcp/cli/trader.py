@@ -212,6 +212,26 @@ def main(argv: list[str] | None = None) -> int:
     ):
         learn_sub.add_parser(name)
 
+    market = sub.add_parser("market", help="Market-data gateway status")
+    market_sub = market.add_subparsers(dest="market_command")
+    market_sub.add_parser("status")
+
+    exchange = sub.add_parser("exchange", help="Exchange adapter status")
+    exchange_sub = exchange.add_subparsers(dest="exchange_command")
+    exchange_sub.add_parser("status")
+    exchange_sub.add_parser("list")
+
+    cycle = sub.add_parser("cycle", help="Continuous autonomous PAPER loop")
+    cycle_sub = cycle.add_subparsers(dest="cycle_command")
+    cstart = cycle_sub.add_parser("start")
+    cstart.add_argument("--max-cycles", type=int, default=1)
+    cstart.add_argument("--foreground", action="store_true")
+    cycle_sub.add_parser("stop")
+    cycle_sub.add_parser("status")
+
+    sub.add_parser("live-status", help="Show live trading safety gate (always disabled in Phase 9)")
+    sub.add_parser("kill-switch", help="Show kill-switch state")
+
     args = parser.parse_args(argv)
     settings = get_settings()
 
@@ -221,8 +241,8 @@ def main(argv: list[str] | None = None) -> int:
                 "trading_mode": settings.trading_mode,
                 "live_trading_enabled": settings.live_trading_enabled,
                 "real_money": False,
-                "phase": 8,
-                "note": "Paper trading + dashboard + self-learning; live execution disabled.",
+                "phase": 9,
+                "note": "Paper trading + continuous loop infrastructure; live execution disabled.",
                 "dashboard": "http://127.0.0.1:8050",
                 "TRADING_MODE": "PAPER",
                 "REAL_MONEY": "DISABLED",
@@ -492,6 +512,77 @@ def main(argv: list[str] | None = None) -> int:
             _print(eng.rollback_candidate("cli_rollback"))
         else:
             _print(eng.status())
+        return 0
+
+    if args.command == "market":
+        from crypto_trading_mcp.market.data import MockMarketData
+        from crypto_trading_mcp.market.gateway import MarketDataGateway
+
+        gw = MarketDataGateway(MockMarketData())
+        _print(gw.status())
+        return 0
+
+    if args.command == "exchange":
+        from crypto_trading_mcp.exchange.factory import create_exchange, list_exchanges
+
+        cmd = args.exchange_command or "status"
+        if cmd == "list":
+            _print({"exchanges": list_exchanges()})
+        else:
+            paper = create_exchange("paper")
+            _print(
+                {
+                    "active": "paper",
+                    "status": getattr(paper, "status", lambda: {"exchange": "paper"})(),
+                    "LIVE_TRADING_ENABLED": False,
+                    "TRADING_MODE": "paper",
+                }
+            )
+        return 0
+
+    if args.command == "cycle":
+        from crypto_trading_mcp.autonomous.loop import get_autonomous_loop
+
+        loop = get_autonomous_loop()
+        cmd = args.cycle_command or "status"
+        if cmd == "start":
+            _print(
+                loop.start(
+                    background=not args.foreground,
+                    max_cycles=args.max_cycles,
+                )
+            )
+        elif cmd == "stop":
+            _print(loop.stop())
+        else:
+            _print(loop.status())
+        return 0
+
+    if args.command == "live-status":
+        _print(
+            {
+                "Live Execution": "DISABLED",
+                "LIVE_TRADING_ENABLED": False,
+                "TRADING_MODE": "paper",
+                "note": "Phase 9 keeps live trading disabled.",
+            }
+        )
+        return 0
+
+    if args.command == "kill-switch":
+        from crypto_trading_mcp.risk.config import KillSwitch, load_risk_config
+
+        cfg = load_risk_config()
+        ks = KillSwitch(cfg.kill_switch)
+        st = ks.status()
+        _print(
+            {
+                "active": st.active,
+                "reason": st.reason,
+                "TRADING_MODE": "paper",
+                "LIVE_TRADING_ENABLED": False,
+            }
+        )
         return 0
 
     if args.command in {"run", "dashboard"}:

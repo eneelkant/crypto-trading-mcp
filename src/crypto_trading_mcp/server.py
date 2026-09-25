@@ -408,5 +408,84 @@ def rollback_learning_candidate(reason: str = "manual") -> dict[str, Any]:
     return _learning().rollback_learning_candidate(reason)
 
 
+# --- Phase 9 production / continuous paper tools ---
+_production_tools = None
+
+
+def _production():
+    global _production_tools
+    if _production_tools is None:
+        from crypto_trading_mcp.mcp_tools.production import ProductionToolSurface
+
+        _production_tools = ProductionToolSurface()
+    return _production_tools
+
+
+@mcp.tool()
+def get_market_status() -> dict[str, Any]:
+    """Market-data gateway status."""
+    return _production().get_market_status()
+
+
+@mcp.tool()
+def get_exchange_status(name: str = "paper") -> dict[str, Any]:
+    """Exchange adapter status (live orders remain blocked)."""
+    return _production().get_exchange_status(name)
+
+
+@mcp.tool()
+def get_market_data(symbol: str = "BTC/USD") -> dict[str, Any]:
+    """Fetch normalized market snapshot via gateway."""
+    return _production().get_market_data(symbol)
+
+
+@mcp.tool()
+def get_order_book(symbol: str = "BTC/USD") -> dict[str, Any]:
+    """Fetch order book via market-data gateway."""
+    return _production().get_order_book(symbol)
+
+
+@mcp.tool()
+def get_account(exchange: str = "paper") -> dict[str, Any]:
+    """Paper/mock account snapshot."""
+    return _production().get_account(exchange)
+
+
+@mcp.tool()
+def get_positions(exchange: str = "paper") -> dict[str, Any]:
+    """Paper/mock positions."""
+    return _production().get_positions(exchange)
+
+
+@mcp.tool()
+def get_open_orders(exchange: str = "paper") -> dict[str, Any]:
+    """Paper/mock open orders."""
+    return _production().get_open_orders(exchange)
+
+
+@mcp.tool()
+def start_paper_cycle(max_cycles: int = 1) -> dict[str, Any]:
+    """Start autonomous PAPER cycle(s). Never enables live trading."""
+    return _production().start_paper_cycle(max_cycles=max_cycles)
+
+
+@mcp.tool()
+def stop_paper_cycle() -> dict[str, Any]:
+    """Stop autonomous PAPER cycle loop."""
+    return _production().stop_paper_cycle()
+
+
+@mcp.tool()
+def get_cycle_status() -> dict[str, Any]:
+    """Autonomous paper cycle status."""
+    return _production().get_cycle_status()
+
+
+@mcp.tool()
+def get_execution_status() -> dict[str, Any]:
+    """Execution safety gate status."""
+    return _production().get_execution_status()
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

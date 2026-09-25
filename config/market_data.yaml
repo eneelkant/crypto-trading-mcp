@@ -1,0 +1,19 @@
+market_data:
+  enabled: true
+  default_exchange_id: kraken
+  allowed_exchanges:
+    - kraken
+    - coinbase
+    - binance
+    - bitstamp
+    - gemini
+  max_age_seconds: 120
+  cache_ttl_seconds: 5
+  rest_timeout_seconds: 10
+  websocket_enabled: false
+  stale_blocks_new_trades: true
+  symbols:
+    - BTC/USD
+    - ETH/USD
+  default_timeframe: 1h
+  ohlcv_limit: 120
