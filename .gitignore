@@ -38,6 +38,7 @@ references/failure_log.json
 models/local/
 embeddings/
 .vector_store/
+.runtime/
 
 # Frontend build / deps (serve from dist when built locally; do not commit)
 dashboard_ui/node_modules/

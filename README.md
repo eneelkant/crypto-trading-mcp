@@ -13,20 +13,15 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (8)
+## Current phase (9)
 
-- **16-agent** analysis / consensus / risk / execution / reflection roster
-- Multi-LLM provider abstraction (`mock` default; OpenAI / Anthropic / Gemini via env)
-- Deterministic technical analysis + strategy engine
-- Bull / Bear / Consensus pipeline
-- Deterministic **RiskEngine** + Kill Switch + circuit breakers
-- PaperExchange / PaperTradingEngine (fees, slippage, portfolio)
-- Backtesting, walk-forward, Monte Carlo, sensitivity, prediction-market evaluation
-- Live observability dashboard at `http://127.0.0.1:8050`
-- Self-learning: post-mortem, failure/success memory, similarity context, Brier/calibration,
-  Kelly adaptation, regime detection, optional ML retraining, champion/challenger, proposals, drift
-- MCP tools + `trader` CLI
-- **No live/authenticated execution**
+- Production exchange adapter architecture (Coinbase + Delta India interfaces)
+- Market-data gateway with stale-data gating
+- Continuous autonomous **PAPER** trading loop
+- Order idempotency + cycle state machine
+- Self-learning + dashboard from Phase 8
+- **PAPER TRADING: ENABLED**
+- **LIVE TRADING: DISABLED**
 
 Defaults:
 
@@ -87,6 +82,12 @@ trader learning brier
 trader learning models
 trader learning proposals
 trader dashboard status
+trader market status
+trader exchange list
+trader cycle start --max-cycles 1 --foreground
+trader cycle status
+trader live-status
+trader kill-switch
 ```
 
 ## MCP server

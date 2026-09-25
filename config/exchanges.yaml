@@ -1,0 +1,29 @@
+exchanges:
+  paper:
+    enabled: true
+    adapter: paper
+  mock:
+    enabled: true
+    adapter: mock
+  coinbase:
+    enabled: true
+    adapter: coinbase
+    base_url: https://api.coinbase.com
+    public_market_data: true
+    live_orders_require: LIVE_TRADING_ENABLED
+  delta_india:
+    enabled: true
+    adapter: delta_india
+    base_url: https://api.india.delta.exchange
+    public_market_data: true
+    live_orders_require: LIVE_TRADING_ENABLED
+    auth: HMAC-SHA256
+
+env_keys:
+  coinbase:
+    - COINBASE_API_KEY
+    - COINBASE_API_SECRET
+  delta_india:
+    - DELTA_API_KEY
+    - DELTA_API_SECRET
+    - DELTA_API_BASE_URL
