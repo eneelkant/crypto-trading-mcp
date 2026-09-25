@@ -1,0 +1,44 @@
+{
+  "strategy_metadata": {
+    "name": "Prediction Market AI Ensemble",
+    "version": "1.0.0",
+    "description": "Paper prediction-contract architecture with ensemble probability vs market price edge. Not a profitability claim.",
+    "author": "Crypto Trading MCP Reference Suite",
+    "supported_markets": ["Prediction"],
+    "recommended_pairs": ["PREDICT/*"],
+    "execution_timeframe": "1h",
+    "bias_timeframe": "1d"
+  },
+  "risk_management": {
+    "risk_per_trade_percent": 0.5,
+    "min_risk_reward_ratio": 1.0,
+    "target_risk_reward_ratio": 1.5,
+    "stop_loss_method": "None",
+    "atr_fallback_multiplier": 1.0,
+    "partial_take_profit_1r": {"enabled": false, "exit_quantity_percent": 0},
+    "move_stop_loss_to_breakeven_at_1r": false,
+    "circuit_breakers": {
+      "max_daily_loss_percent": 2.0,
+      "max_trades_per_day": 10,
+      "cooldown_bars_between_trades": 0,
+      "eod_flat_close_enabled": false
+    }
+  },
+  "signal_filters": {
+    "adx": {"length": 14, "min_strength": 1},
+    "ema_alignment": {"fast_ema": 5, "slow_ema": 10, "structural_ema": 20, "long_term_ema": 50},
+    "volume": {"length": 20, "multiplier": 1.0}
+  },
+  "trading_models": [
+    {
+      "model_id": "ENSEMBLE_EDGE",
+      "name": "Ensemble Edge",
+      "type": "Prediction",
+      "enabled": true,
+      "rules": {
+        "min_edge": 0.05,
+        "providers": ["grok", "claude", "gpt", "gemini", "deepseek"]
+      }
+    }
+  ]
+}

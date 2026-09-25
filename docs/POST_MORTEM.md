@@ -1,0 +1,5 @@
+# Post-Mortem
+
+Triggered `ON_TRADE_CLOSE`. Classifications include BAD_PREDICTION, HIGH_SLIPPAGE,
+MARKET_REGIME_SHIFT, BAD_TIMING_OR_EXECUTION, EXTERNAL_SHOCK, GOOD_PREDICTION,
+GOOD_EXECUTION, NORMAL_VARIANCE. Losing trades are not automatically strategy failures.

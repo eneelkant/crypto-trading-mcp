@@ -1,0 +1,13 @@
+dashboard:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8050
+  auto_open: true
+  websocket_enabled: true
+  event_history_limit: 5000
+  static_dir: "dashboard_ui/dist"
+  title: "AI Trading Command Center"
+
+disclaimer: >
+  Dashboard is an observability layer. Dashboard failure must not stop trading.
+  Live trading remains disabled unless explicitly configured later.

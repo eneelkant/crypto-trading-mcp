@@ -1,0 +1,26 @@
+compliance:
+  enabled: true
+  blocked_strategies: []
+  blocked_asset_classes: []
+  require_paper_mode: true
+  max_turnover_usd_per_day: 1000000
+  allow_prediction_markets: true
+  allow_futures: true
+
+tax_simulation:
+  enabled: true
+  # Simulation parameters only — NOT tax advice / legal truth.
+  disclaimer: "Configurable simulation model. Not tax advice."
+  vda:
+    enabled: true
+    apply_to_asset_classes: [CRYPTO]
+    rate: 0.30
+  tds:
+    enabled: true
+    apply_to_asset_classes: [CRYPTO]
+    rate: 0.01
+  loss_setoff_allowed: false
+  transaction_tax:
+    equity_rate: 0.001
+    commodity_rate: 0.0005
+    default_rate: 0.0

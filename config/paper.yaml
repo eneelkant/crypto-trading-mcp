@@ -1,0 +1,39 @@
+paper:
+  initial_cash: 10000
+  quote_currency: USD
+  fees:
+    default_rate: 0.001
+    maker_bps: 10
+    taker_bps: 20
+  slippage:
+    enabled: true
+    model: fixed_bps
+    default_bps: 5
+    max_bps: 50
+    mode: fixed_bps
+    value: 5
+  strategy_conflict_mode: NO_TRADE  # NO_TRADE | NETTED | SEPARATE_STRATEGY_BOOK
+  kill_switch_file: STOP
+  max_consecutive_api_failures: 3
+  timezone: UTC
+  flatten_at_eod: false
+  eod_flat_default: false
+
+instruments:
+  BTC/USD: { asset_class: CRYPTO, tick_size: 0.01, lot_size: 0.0001 }
+  BTCUSDT: { asset_class: CRYPTO, tick_size: 0.01, lot_size: 0.0001 }
+  ETH/USD: { asset_class: CRYPTO, tick_size: 0.01, lot_size: 0.0001 }
+  SPY: { asset_class: ETF, tick_size: 0.01, lot_size: 1 }
+  QQQ: { asset_class: ETF, tick_size: 0.01, lot_size: 1 }
+  GLD: { asset_class: COMMODITY, tick_size: 0.01, lot_size: 1 }
+  USO: { asset_class: COMMODITY, tick_size: 0.01, lot_size: 1 }
+  NQ1!: { asset_class: FUTURE, tick_size: 0.25, lot_size: 1, multiplier: 20 }
+
+symbol_strategy_map:
+  BTC/USD: momentum_breakout_crypto
+  BTCUSDT: multi_model_po3_vwap
+  SPY: mean_reversion_equity
+  QQQ: mean_reversion_equity
+  GLD: trend_following_commodities
+  USO: trend_following_commodities
+  PREDICT/*: prediction_market_ai
