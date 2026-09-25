@@ -44,6 +44,7 @@ CYCLE_TRANSITIONS: dict[CycleState, set[CycleState]] = {
     },
     CycleState.TRADE_PROPOSED: {
         CycleState.RISK_VALIDATING,
+        CycleState.CYCLE_COMPLETED,
         CycleState.CYCLE_FAILED,
     },
     CycleState.RISK_VALIDATING: {
