@@ -1,0 +1,149 @@
+{
+  "okf_specification": {
+    "spec_version": "0.2.0",
+    "bundle_name": "crypto-bot-trading-guidelines",
+    "domain": "Quantitative Algorithmic Crypto Trading & Prediction Markets",
+    "maintainer": "Crypto Trading MCP Reference Suite",
+    "status": "APPROVED",
+    "description": "Canonical Open Knowledge Format guidelines synthesizing multi-model trading strategies, self-learning agent memory loops, TradingView webhook architectures, and regulatory compliance rules."
+  },
+  "regulatory_and_tax_compliance": {
+    "jurisdiction": "India (Income Tax Act & PMLA Framework)",
+    "rules": {
+      "flat_capital_gains_tax": 0.30,
+      "tds_rate": 0.01,
+      "loss_offset_permitted": false,
+      "turnover_tds_impact": "1% TDS is levied on total transaction volume. High-frequency scalping erodes small accounts; bot MUST enforce low-turnover swing or high-conviction momentum strategies."
+    },
+    "exchange_api_spec": {
+      "target_exchange": "Delta Exchange India",
+      "base_url": "https://api.india.delta.exchange",
+      "auth_type": "HMAC-SHA256",
+      "prehash_string": "method + timestamp + requestPath + query_params + body",
+      "max_clock_skew_seconds": 5,
+      "rate_limit_units_per_5min": 10000
+    },
+    "disclaimer": "Tax and regulatory values are OKF reference assumptions only — not personalized tax advice. Review against current applicable law before any production use. Production trading remains disabled in this repository."
+  },
+  "risk_management_citadel": {
+    "position_sizing": {
+      "method": "ATR_Volatility_Based",
+      "max_risk_per_trade_percent": 1.0,
+      "formula": "Position_Qty = (Account_Equity * Risk_Percent) / (Entry_Price - Stop_Loss_Price)"
+    },
+    "prediction_sizing": {
+      "method": "Quarter_Kelly_Criterion",
+      "formula": "f_star = (p * b - q) / b; position_size = 0.25 * f_star"
+    },
+    "hard_circuit_breakers": {
+      "max_portfolio_drawdown_percent": 10.0,
+      "max_daily_loss_percent": 5.0,
+      "kill_switch_trigger_file": "STOP",
+      "action_on_breach": "Flatten all open positions and halt bot execution loop"
+    },
+    "correlation_filter": {
+      "enabled": true,
+      "rule": "Block new long entries on risk-on assets (e.g., BTC/USD) if correlated index assets (e.g., SPY & QQQ) are both currently in long positions.",
+      "risk_on_assets": ["BTC/USD", "BTC-USD", "BTCUSDT", "ETH/USD", "ETH-USD", "ETHUSDT"],
+      "correlated_long_blockers": ["SPY", "QQQ"]
+    },
+    "low_turnover": {
+      "enabled": true,
+      "preferred_styles": ["swing", "momentum", "high_conviction"],
+      "forbidden_styles": ["uncontrolled_scalping", "high_frequency_scalping"],
+      "max_trades_per_day_cap": 8,
+      "min_cooldown_bars": 5
+    }
+  },
+  "self_learning_agent_framework": {
+    "post_mortem_analysis": {
+      "trigger": "ON_TRADE_CLOSE",
+      "failure_categories": [
+        "BAD_PREDICTION",
+        "HIGH_SLIPPAGE",
+        "MARKET_REGIME_SHIFT",
+        "BAD_TIMING_OR_EXECUTION",
+        "EXTERNAL_SHOCK"
+      ],
+      "action": "Classify loss cause and save setup parameters into references/failure_log.json"
+    },
+    "pre_trade_memory_check": {
+      "action": "Query vector database/failure log for identical technical setups before submitting live order. Abort if past failure match confidence > 80%.",
+      "block_confidence_threshold": 0.80
+    },
+    "brier_score_recalibration": {
+      "metric": "Brier Score (BS = 1/n * SUM((p_predicted - y_actual)^2))",
+      "threshold": 0.25,
+      "action": "If BS > 0.25, lower prediction model confidence weightings and shrivel Kelly multiplier to 0.25x."
+    },
+    "machine_learning": {
+      "model": "XGBoost Classifier",
+      "evaluation": "Out-of-Sample Walk-Forward Validation",
+      "features": [
+        "RSI_14",
+        "MACD_HISTOGRAM",
+        "VWAP_DISTANCE",
+        "BOLLINGER_BAND_WIDTH",
+        "VOLUME_BREAKOUT_MULT"
+      ],
+      "optional": true
+    }
+  },
+  "trading_models_and_strategies": [
+    {
+      "model_id": "M1_PO3_SWEEP",
+      "name": "Power of Three (PO3) Liquidity Sweep",
+      "timeframe": "5m / 15m",
+      "type": "Liquidity_Reversal",
+      "rules": "Detect sweeps of PDH/PDL/PMH/PML followed by candle body close rejection, confirmed by ADX > 21 and volume > 1.3x."
+    },
+    {
+      "model_id": "M2_VWAP_RECLAIM",
+      "name": "VWAP Reclaim with Displacement",
+      "timeframe": "5m / 15m",
+      "type": "Trend_Continuation",
+      "rules": "Reclaim of VWAP with displacement candle body (> 0.3 ATR) aligned with 4H higher-timeframe trend bias."
+    },
+    {
+      "model_id": "M3_ICT_FVG_SWING",
+      "name": "ICT 4H/15m Fair Value Gap Swing Setup",
+      "timeframe": "240m HTF / 15m LTF",
+      "type": "Smart_Money_Concepts",
+      "rules": "4H swing high/low sweep -> 15m Market Structure Break (MSB) -> 15m FVG formation -> Retrace to >= 0.5 Fib level -> Limit Order entry in FVG."
+    },
+    {
+      "model_id": "M4_PREDICTION_MARKET_AI",
+      "name": "Multi-LLM Ensemble Prediction Bot",
+      "type": "Probability_Arbitrage",
+      "ensemble_weights": {
+        "grok_forecaster": 0.30,
+        "claude_news_analyst": 0.20,
+        "gpt4_bull_advocate": 0.20,
+        "gemini_bear_advocate": 0.15,
+        "deepseek_risk_manager": 0.15
+      },
+      "entry_condition": "Execute limit order when (p_model - p_market) > 0.04 and VADER NLP sentiment score >= 0."
+    },
+    {
+      "model_id": "M5_MOMENTUM_BREAKOUT",
+      "name": "Donchian Channel Breakout",
+      "timeframe": "1h",
+      "type": "Momentum",
+      "rules": "Go long on 20-period High break with 1.5x average volume confirmation; trail stop with 2x ATR."
+    }
+  ],
+  "infrastructure_and_webhook": {
+    "server_environment": "Linux VPS (DigitalOcean / AWS) with HTTPS SSL Certificate",
+    "webhook_security": {
+      "secret_token_verification": true,
+      "alert_source": "TradingView Pro+ Server-Side Alerts"
+    },
+    "payload_format": {
+      "action": "{{strategy.order.action}}",
+      "symbol": "{{ticker}}",
+      "price": "{{close}}",
+      "qty": "{{strategy.order.contracts}}",
+      "secret": "PLACEHOLDER_NOT_A_SECRET"
+    }
+  }
+}

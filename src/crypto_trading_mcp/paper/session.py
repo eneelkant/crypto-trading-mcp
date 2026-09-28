@@ -20,7 +20,7 @@ class PaperSession:
     status: str = "ACTIVE"  # ACTIVE | STOPPED | COMPLETED | KILLED
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        meta: dict[str, Any] = {
             "session_id": self.session_id,
             "started_at": self.started_at,
             "ended_at": self.ended_at,
@@ -33,6 +33,15 @@ class PaperSession:
             "REAL_MONEY": "DISABLED",
             "TRADING_MODE": "PAPER",
         }
+        # Record active OKF version/hash in paper-trading run metadata.
+        try:
+            from crypto_trading_mcp.okf.status import okf_paper_metadata
+
+            meta.update(okf_paper_metadata())
+        except Exception:
+            meta["okf_version"] = None
+            meta["okf_hash"] = None
+        return meta
 
     def complete(self, ending_equity: float, *, status: str = "COMPLETED") -> None:
         self.ended_at = datetime.now(UTC).isoformat()

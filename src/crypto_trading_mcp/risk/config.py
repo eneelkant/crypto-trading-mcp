@@ -57,8 +57,10 @@ class KillSwitch:
 def merge_effective_limits(
     global_limits: GlobalRiskLimits,
     strategy: StrategyConfig | None,
+    *,
+    okf_constraints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Always take the stricter (safer) bound between global and strategy."""
+    """Always take the stricter (safer) bound between global, strategy, and OKF."""
     strat_risk_pct = None
     strat_daily = None
     strat_trades = None
@@ -88,13 +90,47 @@ def merge_effective_limits(
         if strat_trades is not None
         else global_limits.max_trades_per_day
     )
+    max_drawdown = global_limits.max_drawdown_pct
+    kelly = global_limits.kelly_fraction
+    cooldown = strat_cooldown
+    conflicts: list[dict[str, Any]] = []
+
+    if okf_constraints:
+        okf_risk = float(okf_constraints.get("max_risk_per_trade_pct", risk_per_trade))
+        okf_daily = float(okf_constraints.get("max_daily_loss_pct", max_daily))
+        okf_dd = float(okf_constraints.get("max_drawdown_pct", max_drawdown))
+        okf_trades = int(okf_constraints.get("max_trades_per_day", max_trades))
+        okf_kelly = float(okf_constraints.get("kelly_base_fraction", kelly))
+        okf_cooldown = int(okf_constraints.get("cooldown_bars", 0))
+
+        def _min_field(name: str, current: float | int, okf_val: float | int) -> float | int:
+            effective = min(current, okf_val)
+            if current != okf_val:
+                conflicts.append(
+                    {
+                        "field": name,
+                        "system_or_strategy": current,
+                        "okf": okf_val,
+                        "effective": effective,
+                        "reason_code": f"OKF_SYSTEM_CONFLICT_{name.upper()}",
+                    }
+                )
+            return effective
+
+        risk_per_trade = float(_min_field("max_risk_per_trade_pct", risk_per_trade, okf_risk))
+        max_daily = float(_min_field("max_daily_loss_pct", max_daily, okf_daily))
+        max_drawdown = float(_min_field("max_drawdown_pct", max_drawdown, okf_dd))
+        max_trades = int(_min_field("max_trades_per_day", max_trades, okf_trades))
+        kelly = float(_min_field("kelly_fraction", kelly, okf_kelly))
+        cooldown = max(cooldown, okf_cooldown)
+
     min_rr = max(global_limits.min_risk_reward, strat_min_rr)
     return {
         "risk_per_trade_pct": risk_per_trade,
         "max_daily_loss_pct": max_daily,
-        "max_drawdown_pct": global_limits.max_drawdown_pct,
+        "max_drawdown_pct": max_drawdown,
         "max_trades_per_day": max_trades,
-        "cooldown_bars": strat_cooldown,
+        "cooldown_bars": cooldown,
         "min_risk_reward": min_rr,
         "max_position_pct": global_limits.max_position_pct,
         "max_trade_pct": global_limits.max_trade_pct,
@@ -104,9 +140,10 @@ def merge_effective_limits(
         "require_stop_loss": global_limits.require_stop_loss,
         "min_liquidity_usd": global_limits.min_liquidity_usd,
         "min_confidence": global_limits.min_confidence,
-        "kelly_fraction": global_limits.kelly_fraction,
+        "kelly_fraction": kelly,
         "max_consecutive_api_failures": global_limits.max_consecutive_api_failures,
         "allowed_pairs": list(global_limits.allowed_pairs),
+        "okf_conflicts": conflicts,
     }
 
 

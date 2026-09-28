@@ -14,8 +14,9 @@ from crypto_trading_mcp.live.stages import TradingStage, TradingStageManager
 SECRET_PATTERNS = [
     re.compile(r"-----BEGIN (RSA |EC )?PRIVATE KEY-----"),
     re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
-    re.compile(r"COINBASE_API_SECRET\s*=\s*\S+"),
-    re.compile(r"DELTA_API_SECRET\s*=\s*\S+"),
+    # Same-line assignments only (do not let \s match newlines into the next key).
+    re.compile(r"COINBASE_API_SECRET[ \t]*=[ \t]*\S+"),
+    re.compile(r"DELTA_API_SECRET[ \t]*=[ \t]*\S+"),
 ]
 
 

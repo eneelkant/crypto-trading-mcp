@@ -29,7 +29,9 @@ class StrategyRepository:
     def _load_disk(self) -> None:
         if not self.strategies_dir.exists():
             return
-        for path in sorted(self.strategies_dir.glob("*.json")):
+        paths = list(self.strategies_dir.glob("*.json"))
+        paths.extend(self.strategies_dir.glob("okf/*.json"))
+        for path in sorted(paths):
             config = load_strategy_config(path)
             record = build_strategy_record(
                 config,

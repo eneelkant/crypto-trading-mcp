@@ -159,6 +159,10 @@ def build_strategy_record(
     # Prefer stable id for the reference suite.
     if "po3" in sid and "vwap" in sid:
         sid = "multi_model_po3_vwap"
+    if "okf" in sid and "bundle" in sid:
+        sid = "okf_crypto_bot_guidelines"
+    if sid.startswith("okf_m1"):
+        sid = "okf_m1_po3_sweep"
     return StrategyRecord(
         strategy_id=sid,
         name=config.strategy_metadata.name,
