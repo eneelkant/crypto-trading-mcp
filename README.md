@@ -41,6 +41,20 @@ Production readiness docs: `docs/LIVE_TRADING_READINESS.md`, `docs/TRADING_STAGE
 Cloud-paper / Stage 2 (still cannot live trade): `deploy/docker-compose.cloud-paper.yml`.
 Sandbox venue: Delta India TESTNET — see `docs/STAGE2_CLOUD_PAPER.md`.
 
+## OKF trading guidelines (v0.2.0)
+
+Canonical Open Knowledge Format guidelines live at
+`okf/okf_crypto_bot_guidelines.json` (machine-readable; **not executable**).
+
+- Validator / hash / diagnostics: `crypto_trading_mcp.okf`
+- Stricter-wins merge into deterministic `RiskEngine`
+- Strategy registry M1–M5, self-learning gates, optional TradingView webhook intents
+- Full write-up: `docs/OKF_GUIDELINES.md`
+
+```bash
+python -c "from crypto_trading_mcp.okf import load_and_validate_okf; print(load_and_validate_okf()['version'], load_and_validate_okf()['hash'])"
+```
+
 ## Setup
 
 ```bash
@@ -128,4 +142,5 @@ exchange keys with withdrawals disabled if you ever configure live credentials l
 - `docs/DASHBOARD.md` / `docs/OBSERVABILITY.md`
 - `docs/SELF_LEARNING.md` / `docs/LEARNING.md`
 - `docs/RISK_MANAGEMENT.md` / `docs/LIVE_EXECUTION_POLICY.md`
+- `docs/OKF_GUIDELINES.md` / `docs/DELTA_EXCHANGE_INDIA.md` / `docs/STAGE2_CLOUD_PAPER.md`
 - `docs/OPERATIONS.md` / `docs/TROUBLESHOOTING.md` / `docs/24X7_OPERATIONS.md`

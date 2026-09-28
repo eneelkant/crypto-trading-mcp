@@ -487,5 +487,16 @@ def get_execution_status() -> dict[str, Any]:
     return _production().get_execution_status()
 
 
+@mcp.tool()
+def get_okf_status() -> dict[str, Any]:
+    """OKF guideline version, hash, resolved constraints, and safety hierarchy.
+
+    OKF is not executable and cannot place orders. Live trading remains disabled.
+    """
+    from crypto_trading_mcp.okf.status import okf_diagnostics
+
+    return okf_diagnostics()
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
