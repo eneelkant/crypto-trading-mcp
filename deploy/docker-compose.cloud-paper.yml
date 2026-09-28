@@ -1,4 +1,4 @@
-# Cloud-paper stack. Cannot submit live orders.
+# Cloud-paper stack (Stage 2). Cannot submit production/live orders.
 # TRADING_MODE=paper and LIVE_TRADING_ENABLED=false are enforced.
 services:
   postgres:
@@ -14,6 +14,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   worker:
     build:
@@ -23,12 +27,31 @@ services:
       TRADING_MODE: paper
       LIVE_TRADING_ENABLED: "false"
       CLOUD_PAPER_ISOLATED: "true"
-      PAPER_LOOP_INTERVAL: "30"
+      TRADING_STAGE: STAGE_2_CLOUD_PAPER
+      PAPER_LOOP_INTERVAL: "5"
+      PAPER_MAX_CYCLES: "3"
+      HEALTH_PORT: "8080"
+      TZ: UTC
       DATABASE_URL: postgres://paper:paper@postgres:5432/trading_paper
+      # Sandbox credentials must come from env/Secret Manager — never bake into image.
+      DELTA_API_BASE_URL: https://cdn-ind.testnet.deltaex.org
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "8080:8080"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
 
 volumes:
   paper_pg:

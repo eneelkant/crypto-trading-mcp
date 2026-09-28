@@ -38,7 +38,8 @@ Dashboard default bind: `127.0.0.1:8050`.
 Production readiness docs: `docs/LIVE_TRADING_READINESS.md`, `docs/TRADING_STAGES.md`,
 `docs/LIVE_EXECUTION_POLICY.md`, `docs/CLOUD_DEPLOYMENT.md`.
 
-Cloud-paper (still cannot live trade): `deploy/docker-compose.cloud-paper.yml`.
+Cloud-paper / Stage 2 (still cannot live trade): `deploy/docker-compose.cloud-paper.yml`.
+Sandbox venue: Delta India TESTNET — see `docs/STAGE2_CLOUD_PAPER.md`.
 
 ## Setup
 

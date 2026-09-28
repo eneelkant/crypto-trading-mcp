@@ -14,6 +14,11 @@ from crypto_trading_mcp.credentials.provider import (
     SecretManagerCredentialProvider,
 )
 from crypto_trading_mcp.credentials.redaction import redact_payload
+from crypto_trading_mcp.credentials.secret_provider import (
+    EnvironmentSecretProvider,
+    GoogleSecretManagerProvider,
+    SecretProvider,
+)
 
 __all__ = [
     "CredentialHealthCheck",
@@ -22,8 +27,11 @@ __all__ = [
     "CredentialPermissionValidator",
     "CredentialProvider",
     "EnvironmentCredentialProvider",
+    "EnvironmentSecretProvider",
     "ExchangeCredentialSet",
     "ExchangeEnvironment",
+    "GoogleSecretManagerProvider",
     "SecretManagerCredentialProvider",
+    "SecretProvider",
     "redact_payload",
 ]
