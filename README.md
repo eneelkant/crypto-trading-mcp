@@ -41,6 +41,16 @@ Production readiness docs: `docs/LIVE_TRADING_READINESS.md`, `docs/TRADING_STAGE
 Cloud-paper / Stage 2 (still cannot live trade): `deploy/docker-compose.cloud-paper.yml`.
 Sandbox venue: Delta India TESTNET — see `docs/STAGE2_CLOUD_PAPER.md`.
 
+## Stage 2.1 — Delta India TESTNET validation
+
+Opt-in testnet validation path (still `TRADING_MODE=paper`, live disabled).
+
+See `docs/STAGE2_1_DELTA_TESTNET.md`. Production hosts remain rejected.
+
+```bash
+python -c "from crypto_trading_mcp.sandbox import run_stage21_validation; print(run_stage21_validation(force_harness=True)['summary'])"
+```
+
 ## OKF trading guidelines (v0.2.0)
 
 Canonical Open Knowledge Format guidelines live at

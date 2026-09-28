@@ -12,7 +12,13 @@ from crypto_trading_mcp.exchange.auth import delta_india_signature, utc_timestam
 from crypto_trading_mcp.exchange.base import ExchangeAdapter
 from crypto_trading_mcp.exchange.exceptions import LiveExecutionBlocked
 from crypto_trading_mcp.exchange.health import ExchangeHealth
-from crypto_trading_mcp.exchange.models import Balance, Order, OrderSide, OrderType
+from crypto_trading_mcp.exchange.models import (
+    Balance,
+    Order,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+)
 
 
 class DeltaExchangeIndiaAdapter(ExchangeAdapter):
@@ -20,6 +26,13 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
 
     name = "delta_india"
     supports_live_execution = True
+
+    PRODUCTION_HOSTS = frozenset(
+        {
+            "api.india.delta.exchange",
+            "api.delta.exchange",
+        }
+    )
 
     def __init__(
         self,
@@ -29,7 +42,8 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
         api_secret: str | None = None,
         transport: Callable[..., httpx.Response] | None = None,
         environment: ExchangeEnvironment | str = ExchangeEnvironment.MOCK,
-        max_clock_skew_seconds: int = 30,
+        max_clock_skew_seconds: int | None = None,
+        allow_real_testnet_http: bool = False,
     ) -> None:
         self.base_url = (
             base_url
@@ -43,16 +57,53 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
         if isinstance(environment, str):
             environment = ExchangeEnvironment(environment)
         self.environment = environment
+        # OKF reference clock skew for testnet is 5s; keep looser default for mocks.
+        if max_clock_skew_seconds is None:
+            max_clock_skew_seconds = (
+                5
+                if environment
+                in {ExchangeEnvironment.SANDBOX, ExchangeEnvironment.TESTNET}
+                else 30
+            )
         self.max_clock_skew_seconds = max_clock_skew_seconds
+        self.allow_real_testnet_http = allow_real_testnet_http
+        self.rate_limit_events: list[dict[str, Any]] = []
+
+    def _host(self) -> str:
+        from urllib.parse import urlparse
+
+        return urlparse(self.base_url).netloc.lower()
+
+    def _assert_not_production_host(self) -> None:
+        if self._host() in self.PRODUCTION_HOSTS:
+            raise LiveExecutionBlocked(
+                f"Production Delta host forbidden for testnet path: {self._host()}"
+            )
 
     def _assert_live_orders_allowed(self) -> None:
         settings = get_settings()
         if self.environment in {ExchangeEnvironment.SANDBOX, ExchangeEnvironment.TESTNET}:
-            if self._transport is None:
+            self._assert_not_production_host()
+            if settings.live_trading_enabled:
                 raise LiveExecutionBlocked(
-                    "Delta sandbox/testnet orders require injected transport mocks"
+                    "LIVE_TRADING_ENABLED must remain false for Delta testnet orders"
                 )
-            return
+            if settings.trading_mode not in {"paper", "backtest"}:
+                raise LiveExecutionBlocked(
+                    "Delta testnet orders require TRADING_MODE=paper (or backtest)"
+                )
+            if self._transport is not None:
+                return
+            if self.allow_real_testnet_http:
+                if not self.api_key or not self.api_secret:
+                    raise LiveExecutionBlocked(
+                        "REAL_DELTA_TESTNET_CREDENTIALS_NOT_CONFIGURED"
+                    )
+                return
+            raise LiveExecutionBlocked(
+                "Delta sandbox/testnet orders require injected transport mocks "
+                "or allow_real_testnet_http=True with testnet credentials"
+            )
         if settings.trading_mode != "live" or not settings.live_trading_enabled:
             raise LiveExecutionBlocked(
                 "Delta India live order execution blocked: "
@@ -126,11 +177,23 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
                     method, url, headers=headers, content=body or None, **kwargs
                 )
             else:
+                if self.environment in {
+                    ExchangeEnvironment.SANDBOX,
+                    ExchangeEnvironment.TESTNET,
+                }:
+                    self._assert_not_production_host()
                 response = httpx.request(
                     method, url, headers=headers, content=body or None, timeout=10.0, **kwargs
                 )
-            if getattr(response, "status_code", 200) >= 400:
-                raise RuntimeError(f"HTTP {response.status_code}")
+            status = int(getattr(response, "status_code", 200) or 200)
+            if status == 429:
+                self.rate_limit_events.append(
+                    {"path": path, "status": 429, "method": method}
+                )
+                self.health.mark_error("RATE_LIMITED")
+                raise RuntimeError("RATE_LIMITED")
+            if status >= 400:
+                raise RuntimeError(f"HTTP {status}")
             data = response.json()
             self.health.mark_ok()
             return data if isinstance(data, dict) else {"data": data}
@@ -151,6 +214,19 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
 
     def get_market_info(self, symbol: str) -> dict[str, Any]:
         return self._request("GET", f"/v2/products/{symbol}")
+
+    def list_products(self) -> list[dict[str, Any]]:
+        data = self._request("GET", "/v2/products")
+        result = data.get("result") or data.get("products") or data.get("data") or []
+        return result if isinstance(result, list) else []
+
+    def get_server_time(self) -> dict[str, Any]:
+        """Best-effort server time for clock-skew checks (public)."""
+        try:
+            data = self._request("GET", "/v2/settings")
+            return data if isinstance(data, dict) else {"raw": data}
+        except Exception as exc:  # noqa: BLE001
+            return {"error": str(exc), "local_timestamp_ms": time_ms()}
 
     def get_account(self) -> dict[str, Any]:
         if not self.api_key:
@@ -210,6 +286,18 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
         rows = data.get("result") or []
         return rows if isinstance(rows, list) else []
 
+    def _map_status(self, raw: str | None) -> OrderStatus:
+        s = str(raw or "").lower()
+        if s in {"cancelled", "canceled"}:
+            return OrderStatus.CANCELLED
+        if s in {"closed", "filled"}:
+            return OrderStatus.FILLED
+        if s in {"open", "new", "accepted", "pending"}:
+            return OrderStatus.SUBMITTED
+        if s in {"rejected"}:
+            return OrderStatus.REJECTED
+        return OrderStatus.CREATED
+
     def get_order(self, order_id: str) -> Order:
         data = self._request("GET", f"/v2/orders/{order_id}", auth=True)
         row = data.get("result") or data
@@ -217,11 +305,13 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
         type_raw = str(row.get("order_type") or "limit").upper()
         return Order(
             order_id=str(row.get("id") or order_id),
+            client_order_id=str(row.get("client_order_id") or "") or None,
             symbol=str(row.get("product_symbol") or row.get("symbol") or ""),
             side=OrderSide.BUY if side_raw.startswith("BUY") else OrderSide.SELL,
             quantity=float(row.get("size") or 0),
             order_type=OrderType.MARKET if type_raw == "MARKET" else OrderType.LIMIT,
             limit_price=float(row.get("limit_price") or 0) if row.get("limit_price") else None,
+            status=self._map_status(row.get("status")),
         )
 
     def submit_order(self, order: Order, market_price: float | None = None) -> Order:
@@ -229,18 +319,26 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
 
     def create_order(self, order: Order, market_price: float | None = None) -> Order:
         self._assert_live_orders_allowed()
-        body = json.dumps(
-            {
-                "product_symbol": order.symbol,
-                "side": order.side.lower(),
-                "size": order.quantity,
-                "order_type": (order.order_type or "market").lower(),
-            }
+        side = order.side.value if hasattr(order.side, "value") else str(order.side)
+        otype = order.order_type.value if hasattr(order.order_type, "value") else str(
+            order.order_type or "market"
         )
+        payload: dict[str, Any] = {
+            "product_symbol": order.symbol,
+            "side": side.lower(),
+            "size": order.quantity,
+            "order_type": otype.lower(),
+        }
+        if order.limit_price is not None:
+            payload["limit_price"] = str(order.limit_price)
+        if order.client_order_id:
+            payload["client_order_id"] = order.client_order_id
+        body = json.dumps(payload, separators=(",", ":"))
         data = self._request("POST", "/v2/orders", auth=True, body=body)
         row = data.get("result") or data
         return Order(
             order_id=str(row.get("id") or order.order_id or "delta-sim"),
+            client_order_id=order.client_order_id,
             symbol=order.symbol,
             side=order.side,
             quantity=order.quantity,
@@ -258,6 +356,7 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
             side=OrderSide.BUY,
             quantity=0.0,
             order_type=OrderType.LIMIT,
+            status=self._map_status(row.get("status") or "cancelled"),
         )
 
     def cancel_all_open_orders(self) -> dict[str, Any]:
@@ -279,6 +378,9 @@ class DeltaExchangeIndiaAdapter(ExchangeAdapter):
             {
                 "environment": self.environment.value,
                 "has_api_key": bool(self.api_key),
+                "allow_real_testnet_http": self.allow_real_testnet_http,
+                "base_host": self._host(),
+                "rate_limit_events": len(self.rate_limit_events),
                 "LIVE_TRADING_ENABLED": False,
             }
         )

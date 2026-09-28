@@ -32,12 +32,40 @@ class LocalDeltaSandboxHarness:
         headers = kwargs.get("headers") or {}
         content = kwargs.get("content")
 
+        if path.startswith("/v2/settings"):
+            return httpx.Response(
+                200, json={"result": {"server_time": datetime.now(UTC).isoformat()}}
+            )
         if path.startswith("/v2/tickers"):
             return httpx.Response(200, json={"result": {"close": "100.0", "mark_price": "100.0"}})
         if path.startswith("/v2/l2orderbook"):
             return httpx.Response(200, json={"result": {"buy": [], "sell": []}})
-        if path.startswith("/v2/products"):
-            return httpx.Response(200, json={"result": {"symbol": "BTCUSD"}})
+        if path.rstrip("/") == "/v2/products" and method.upper() == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "symbol": "BTCUSD",
+                            "state": "live",
+                            "trading_status": "operational",
+                            "min_size": 1,
+                            "tick_size": "0.5",
+                        }
+                    ]
+                },
+            )
+        if path.startswith("/v2/products/"):
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "symbol": path.rstrip("/").split("/")[-1],
+                        "min_size": 1,
+                        "state": "live",
+                    }
+                },
+            )
         if path.startswith("/v2/wallet/balances"):
             if not headers.get("signature") and not headers.get("api-key"):
                 return httpx.Response(401, json={"error": "unauthorized"})
@@ -52,22 +80,36 @@ class LocalDeltaSandboxHarness:
             return httpx.Response(200, json={"result": list(self.orders.values())})
         if path.startswith("/v2/orders/") and method.upper() == "GET":
             oid = path.rstrip("/").split("/")[-1]
-            order = self.orders.get(oid) or {"id": oid, "status": "closed", "product_symbol": "BTCUSD", "side": "buy", "size": 0}
+            order = self.orders.get(oid) or {
+                "id": oid,
+                "status": "closed",
+                "product_symbol": "BTCUSD",
+                "side": "buy",
+                "size": 0,
+            }
             return httpx.Response(200, json={"result": order})
         if path == "/v2/orders" and method.upper() == "POST":
             body = json.loads(content or "{}")
+            # Idempotency: reuse existing order for same client_order_id
+            cid = body.get("client_order_id")
+            if cid:
+                for existing in self.orders.values():
+                    if existing.get("client_order_id") == cid:
+                        return httpx.Response(200, json={"result": existing})
             oid = f"SBX-{uuid4().hex[:10]}"
             order = {
                 "id": oid,
+                "client_order_id": cid,
                 "product_symbol": body.get("product_symbol") or "BTCUSD",
                 "side": body.get("side") or "buy",
                 "size": body.get("size") or 0,
                 "order_type": body.get("order_type") or "market",
+                "limit_price": body.get("limit_price"),
                 "status": "open",
                 "created_at": datetime.now(UTC).isoformat(),
             }
             self.orders[oid] = order
-            # immediate fill simulation for market
+            # immediate fill simulation for market; limit stays open for cancel drills
             if str(body.get("order_type") or "market").lower() == "market":
                 order["status"] = "closed"
                 order["filled_size"] = order["size"]
@@ -83,5 +125,14 @@ class LocalDeltaSandboxHarness:
             oid = path.rstrip("/").split("/")[-1]
             if oid in self.orders:
                 self.orders[oid]["status"] = "cancelled"
-            return httpx.Response(200, json={"result": {"id": oid, "status": "cancelled", "product_symbol": "BTCUSD"}})
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": oid,
+                        "status": "cancelled",
+                        "product_symbol": "BTCUSD",
+                    }
+                },
+            )
         return httpx.Response(404, json={"error": "not_found", "path": path})

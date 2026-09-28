@@ -21,9 +21,19 @@ sandbox:
     permissions_forbidden:
       - WITHDRAWAL
     env_keys:
+      - DELTA_ENV
+      - DELTA_TESTNET_API_KEY
+      - DELTA_TESTNET_API_SECRET
+      - DELTA_TESTNET_API_BASE_URL
       - DELTA_API_KEY
       - DELTA_API_SECRET
       - DELTA_API_BASE_URL
+    stage21:
+      description: Real Delta India TESTNET validation (paper mode; never production)
+      require_delta_env: testnet
+      max_clock_skew_seconds: 5
+      allow_real_http_only_with_testnet_credentials: true
+      fallback_when_unconfigured: LocalDeltaSandboxHarness
     supported_operations:
       - authenticate
       - health_check
