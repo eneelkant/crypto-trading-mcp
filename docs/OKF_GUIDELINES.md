@@ -164,6 +164,13 @@ assert r['executable'] is False"
 pytest tests/unit/okf tests/safety/okf -q
 ```
 
+## Stage defaults vs Stage 2
+
+Repository default stage remains `STAGE_1_LOCAL_PAPER` (`config/trading_stages.yaml`).
+The Stage 2 cloud-paper / Delta sandbox stack is activated only through explicit
+entrypoints (`cloud_paper`, sandbox runtime, or compose `TRADING_STAGE`).
+OKF integration does not auto-promote stages. See `docs/STAGE2_CLOUD_PAPER.md`.
+
 ## Limitations
 
 - OKF does not enable live trading
@@ -171,3 +178,4 @@ pytest tests/unit/okf tests/safety/okf -q
 - Semantic similarity for memory is cosine-over-features, not claimed NLP accuracy
 - XGBoost is optional
 - External LLM provider names in M4 are configuration labels; local/mock providers are used for tests
+- Real Delta testnet authentication/trading is NOT claimed by OKF or Stage 2 harness tests

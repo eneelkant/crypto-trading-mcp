@@ -4,7 +4,18 @@
 TRADING_MODE=paper
 LIVE_TRADING_ENABLED=false
 Live Execution=DISABLED
-Current stage: STAGE_2_CLOUD_PAPER
+```
+
+**Safe default:** `config/trading_stages.yaml` keeps `current: STAGE_1_LOCAL_PAPER`.
+Stage 2 is **opt-in** and activated only by explicit entrypoints (`cloud_paper`,
+`Stage2Runtime`, `config/sandbox.yaml`, or `deploy/docker-compose.cloud-paper.yml`
+with `TRADING_STAGE=STAGE_2_CLOUD_PAPER`). Promotion still requires operator evidence;
+skipping stages is forbidden. Live trading remains disabled in all Stage 2 paths.
+
+When Stage 2 is active:
+
+```text
+Active stage (explicit activation only): STAGE_2_CLOUD_PAPER
 ```
 
 ## Selected sandbox venue
