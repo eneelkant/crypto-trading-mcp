@@ -1,13 +1,13 @@
 from crypto_trading_mcp.exchange.base import (
-    CoinbaseAdapter,
-    DeltaExchangeIndiaAdapter,
     ExchangeAdapter,
     KalshiAdapter,
     PolymarketAdapter,
 )
+from crypto_trading_mcp.exchange.coinbase import CoinbaseAdapter
 from crypto_trading_mcp.exchange.config import load_paper_config, resolve_strategy_for_symbol
+from crypto_trading_mcp.exchange.delta_india import DeltaExchangeIndiaAdapter
 from crypto_trading_mcp.exchange.exceptions import LiveExecutionBlocked, PaperExchangeError
-from crypto_trading_mcp.exchange.factory import create_exchange
+from crypto_trading_mcp.exchange.factory import create_exchange, list_exchanges
 from crypto_trading_mcp.exchange.fees import FeeEngine, FeeResult
 from crypto_trading_mcp.exchange.mock import MockExchange
 from crypto_trading_mcp.exchange.models import (
@@ -54,6 +54,7 @@ __all__ = [
     "SlippageResult",
     "brier_score",
     "create_exchange",
+    "list_exchanges",
     "load_paper_config",
     "resolve_strategy_for_symbol",
 ]

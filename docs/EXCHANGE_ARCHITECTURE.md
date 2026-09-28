@@ -45,3 +45,8 @@ trading hours, expiration, and settlement type.
 
 Phase 5 does **not** perform live trading. Authenticated execution endpoints are not
 called.
+
+## Phase 9
+
+Coinbase and Delta India adapters are available for public/read testing.
+Live order submission remains blocked while LIVE_TRADING_ENABLED=false.

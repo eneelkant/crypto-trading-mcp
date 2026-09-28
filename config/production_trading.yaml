@@ -1,0 +1,18 @@
+production_trading:
+  trading_mode: paper
+  live_trading_enabled: false
+  allow_llm_direct_exchange_access: false
+  require_human_approval_for_paper: false
+
+  default_exchange: paper
+  market_data_exchange: kraken
+
+  safety:
+    kill_switch_honored: true
+    stale_data_blocks_new_trades: true
+    risk_engine_required: true
+    live_execution_blocked: true
+
+disclaimer: >
+  Phase 9 builds production infrastructure with continuous PAPER trading.
+  Live execution remains disabled.

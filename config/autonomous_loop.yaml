@@ -1,0 +1,20 @@
+autonomous_loop:
+  enabled: true
+  trading_mode: paper
+  live_trading_enabled: false
+  interval_seconds: 30
+  symbols:
+    - BTC/USD
+  timeframe: 1h
+  max_cycles: 0
+  cycle_timeout_seconds: 120
+  agent_timeout_seconds: 15
+  llm_timeout_seconds: 20
+  market_data_timeout_seconds: 10
+  retry_limit: 1
+  persist_state: true
+  state_path: .runtime/autonomous_cycle_state.json
+  duplicate_cycle_protection: true
+  stale_data_blocks_new_trades: true
+  graceful_shutdown: true
+  strategy_id: momentum_breakout_crypto
