@@ -498,5 +498,31 @@ def get_okf_status() -> dict[str, Any]:
     return okf_diagnostics()
 
 
+@mcp.tool()
+def get_stage21_testnet_status() -> dict[str, Any]:
+    """Stage 2.1 Delta India TESTNET validation status (redacted; no secrets).
+
+    Uses harness when credentials are absent. Never enables production trading.
+    """
+    from crypto_trading_mcp.sandbox.testnet_credentials import resolve_testnet_credentials
+    from crypto_trading_mcp.sandbox.testnet_validation import run_stage21_validation
+    from crypto_trading_mcp.config.settings import get_settings
+
+    settings = get_settings()
+    creds = resolve_testnet_credentials()
+    report = run_stage21_validation(force_harness=not creds.configured)
+    return {
+        "TRADING_MODE": settings.trading_mode,
+        "LIVE_TRADING_ENABLED": settings.live_trading_enabled,
+        "credentials_configured": creds.configured,
+        "credential_source": creds.redacted_dict()["source"],
+        "endpoint": report.get("endpoint"),
+        "mode": report.get("mode"),
+        "summary": report.get("summary"),
+        "classification": report.get("classification"),
+        "note": "Secrets are never returned. Production endpoint remains blocked.",
+    }
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

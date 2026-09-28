@@ -31,8 +31,15 @@ class EnvironmentSecretProvider(SecretProvider):
 
     DEFAULT_MAP = {
         "exchange/delta_india": ("DELTA_API_KEY", "DELTA_API_SECRET"),
+        "exchange/delta_india_testnet": (
+            "DELTA_TESTNET_API_KEY",
+            "DELTA_TESTNET_API_SECRET",
+        ),
         "exchange/coinbase": ("COINBASE_API_KEY", "COINBASE_API_SECRET"),
     }
+
+    # Prefer dedicated testnet vars when resolving delta_india in testnet mode.
+    TESTNET_FALLBACK = ("DELTA_API_KEY", "DELTA_API_SECRET")
 
     def __init__(self, environ: dict[str, str] | None = None) -> None:
         self._environ = environ if environ is not None else dict(os.environ)
@@ -42,7 +49,11 @@ class EnvironmentSecretProvider(SecretProvider):
         keys = self.DEFAULT_MAP.get(name)
         if not keys:
             return False
-        return any(bool(self._environ.get(k)) for k in keys)
+        if any(bool(self._environ.get(k)) for k in keys):
+            return True
+        if name == "exchange/delta_india_testnet":
+            return any(bool(self._environ.get(k)) for k in self.TESTNET_FALLBACK)
+        return False
 
     def get_secret(self, name: str) -> dict[str, Any] | None:
         keys = self.DEFAULT_MAP.get(name)
@@ -51,9 +62,20 @@ class EnvironmentSecretProvider(SecretProvider):
             return None
         api_key = self._environ.get(keys[0]) or ""
         api_secret = self._environ.get(keys[1]) or ""
+        if (
+            not api_key
+            and not api_secret
+            and name == "exchange/delta_india_testnet"
+        ):
+            api_key = self._environ.get(self.TESTNET_FALLBACK[0]) or ""
+            api_secret = self._environ.get(self.TESTNET_FALLBACK[1]) or ""
         if not api_key and not api_secret:
             self.access_log.append(self.audit_access(name, ok=False))
             return None
+        delta_env = (self._environ.get("DELTA_ENV") or "testnet").lower()
+        if delta_env in {"production", "prod", "live"}:
+            self.access_log.append(self.audit_access(name, ok=False))
+            raise PermissionError("Production DELTA_ENV forbidden for testnet secret map")
         self.access_log.append(self.audit_access(name, ok=True))
         return {
             "api_key": api_key,
