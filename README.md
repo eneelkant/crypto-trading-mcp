@@ -13,15 +13,18 @@ Autonomous trading can result in financial loss.
 Users are responsible for determining whether and how to use live trading.
 ```
 
-## Current phase (9)
+## Current status (Phases 1–9 + production readiness foundations)
 
-- Production exchange adapter architecture (Coinbase + Delta India interfaces)
-- Market-data gateway with stale-data gating
-- Continuous autonomous **PAPER** trading loop
-- Order idempotency + cycle state machine
-- Self-learning + dashboard from Phase 8
+- Multi-agent analysis, risk, portfolio, planner, paper exchange, backtest, dashboard, learning
+- Coinbase + Delta India adapters (auth/read architecture; production orders not enabled)
+- Market-data gateway, WebSocket reconnect hooks, freshness gates
+- Credential providers + withdrawal ban + secret redaction
+- Durable order intent ledger (SQLite; Postgres interface)
+- Reconciliation, live execution gate, trading stages (default Stage 1 local paper)
+- Live kill-switch cancel-all hooks, alerting interfaces, cloud-paper packaging
+- RAG/intelligence context layer with prompt-injection containment
 - **PAPER TRADING: ENABLED**
-- **LIVE TRADING: DISABLED**
+- **LIVE TRADING: DISABLED** (not production-live ready)
 
 Defaults:
 
@@ -31,6 +34,11 @@ LIVE_TRADING_ENABLED=false
 ```
 
 Dashboard default bind: `127.0.0.1:8050`.
+
+Production readiness docs: `docs/LIVE_TRADING_READINESS.md`, `docs/TRADING_STAGES.md`,
+`docs/LIVE_EXECUTION_POLICY.md`, `docs/CLOUD_DEPLOYMENT.md`.
+
+Cloud-paper (still cannot live trade): `deploy/docker-compose.cloud-paper.yml`.
 
 ## Setup
 
@@ -109,15 +117,14 @@ exchange keys with withdrawals disabled if you ever configure live credentials l
 
 ## Docs
 
-- `docs/SECURITY.md`
+- `docs/SECURITY.md` / `docs/SECRETS_MANAGEMENT.md` / `docs/EXCHANGE_CREDENTIALS.md`
+- `docs/LIVE_TRADING_READINESS.md` / `docs/LIVE_TRADING_TEST_PLAN.md`
 - `docs/ARCHITECTURE.md` → `docs/ARCHITECTURE_AUDIT.md`
-- `docs/AGENTS.md`
-- `docs/LLM_PROVIDERS.md`
-- `docs/LOCAL_MAC_SETUP.md`
-- `docs/MCP_TOOLS.md`
+- `docs/AGENTS.md` / `docs/RAG_ARCHITECTURE.md` / `docs/DATA_SOURCES.md`
+- `docs/LLM_PROVIDERS.md` / `docs/LOCAL_MAC_SETUP.md` / `docs/MCP_TOOLS.md`
 - `docs/PAPER_TRADING.md` / `docs/AUTONOMOUS_TRADING.md`
 - `docs/BACKTESTING.md` / `docs/WALK_FORWARD.md`
 - `docs/DASHBOARD.md` / `docs/OBSERVABILITY.md`
 - `docs/SELF_LEARNING.md` / `docs/LEARNING.md`
-- `docs/RISK_MANAGEMENT.md`
-- `docs/OPERATIONS.md` / `docs/TROUBLESHOOTING.md`
+- `docs/RISK_MANAGEMENT.md` / `docs/LIVE_EXECUTION_POLICY.md`
+- `docs/OPERATIONS.md` / `docs/TROUBLESHOOTING.md` / `docs/24X7_OPERATIONS.md`

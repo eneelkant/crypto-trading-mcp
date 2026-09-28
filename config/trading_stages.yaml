@@ -1,0 +1,31 @@
+trading_stages:
+  current: STAGE_1_LOCAL_PAPER
+  allow_skip: false
+  automatic_promotion: false
+  cloud_paper_isolates_live: true
+
+  entry_criteria:
+    STAGE_0_BACKTEST:
+      - historical_validation_complete
+    STAGE_1_LOCAL_PAPER:
+      - safety_tests_green
+      - LIVE_TRADING_ENABLED=false
+    STAGE_2_CLOUD_PAPER:
+      - durable_state_configured
+      - health_endpoints_ok
+      - remote_kill_switch_ok
+    STAGE_3_PRODUCTION_READ_ONLY:
+      - secret_manager_wired
+      - read_only_keys_no_withdraw
+      - ip_allowlist
+    STAGE_4_LIVE_DRY_RUN:
+      - order_payload_parity
+      - idempotency_durable
+      - shadow_mode_soak
+    STAGE_5_CONTROLLED_LIVE:
+      - dual_control_enablement
+      - kill_switch_cancel_drill
+      - min_notional_cap
+    STAGE_6_AUTONOMOUS_LIVE:
+      - multi_week_stage5_evidence
+      - chaos_drills_passed

@@ -1,0 +1,34 @@
+# Cloud-paper stack. Cannot submit live orders.
+# TRADING_MODE=paper and LIVE_TRADING_ENABLED=false are enforced.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: paper
+      POSTGRES_PASSWORD: paper
+      POSTGRES_DB: trading_paper
+    volumes:
+      - paper_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paper -d trading_paper"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      TRADING_MODE: paper
+      LIVE_TRADING_ENABLED: "false"
+      CLOUD_PAPER_ISOLATED: "true"
+      PAPER_LOOP_INTERVAL: "30"
+      DATABASE_URL: postgres://paper:paper@postgres:5432/trading_paper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  paper_pg:
